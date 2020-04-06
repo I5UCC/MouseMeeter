@@ -11,6 +11,7 @@ Else {
     MonitorMode()
     VoicemeeterCMD()
 }
+CMD("w32tm.exe", "C:\Windows\System32", True)
 
 ;Mouse-HOTKEYS
 WheelUp::
