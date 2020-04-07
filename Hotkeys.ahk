@@ -1,6 +1,7 @@
 ﻿#SingleInstance ignore
 #NoTrayIcon
 #NoEnv
+#MaxHotkeysPerInterval 2000
 SendMode Input
 
 ;RESET
