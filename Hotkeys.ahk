@@ -122,7 +122,7 @@ CMD(cmd, Directory, bhide:=False) {
     Sleep 200
 }
 
-BraviaCommand(cmd, ip:="192.168.178.26") {
+BraviaCommand(cmd, ip:="192.168.178.25") {
     command = "py bravia_console.py -i %ip% -c %cmd%"
     CMD(command, "\BraviaCtrl", True)
     Sleep 2000
