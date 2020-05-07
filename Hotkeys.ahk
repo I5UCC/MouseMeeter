@@ -16,18 +16,14 @@ CMD("w32tm.exe", "C:\Windows\System32", True)
 
 ;Mouse-HOTKEYS
 WheelUp::
-    If (GetKeyState("XButton1", "P") && GetKeyState("XButton2", "P"))
-        state := "VOIPUp"
-    Else If (GetKeyState("XButton1", "P") || GetKeyState("XButton2", "P"))
+    If (GetKeyState("XButton1", "P") || GetKeyState("XButton2", "P"))
         state := "WheelUp"
     Else
         Send, {WheelUp}
 Return
 
 WheelDown::
-    If (GetKeyState("XButton1", "P") && GetKeyState("XButton2", "P"))
-        state := "VOIPDown"
-    Else If (GetKeyState("XButton1", "P") || GetKeyState("XButton2", "P"))
+    If (GetKeyState("XButton1", "P") || GetKeyState("XButton2", "P"))
         state := "WheelDown"
     Else
         Send, {WheelDown}
@@ -51,12 +47,6 @@ XButton1::
             case "WheelDown":
                 Send, {Volume_Down}
                 state := "done"
-            case "VOIPUp":
-                Send, ^{Volume_Up}
-                state := "done"
-            case "VOIPDown":
-                Send, ^{Volume_Down}
-                state := "done"
         }
     }
     If (!state)
@@ -68,6 +58,12 @@ Return
 XButton2::
     While, GetKeyState("XButton2", "P")
     {
+        If (GetKeyState("XButton1", "P")) {
+            Sleep 1000
+            SendMessage, 0x112, 0xF170, 2,, Program Manager
+            state := "done"
+            Return
+        }
         switch state
         {
             case "WheelUp":
@@ -75,12 +71,6 @@ XButton2::
                 state := "done"
             case "WheelDown":
                 Send, +{Volume_Down}
-                state := "done"
-            case "VOIPUp":
-                Send, ^{Volume_Up}
-                state := "done"
-            case "VOIPDown":
-                Send, ^{Volume_Down}
                 state := "done"
 	        case "MButton":
                 Send, {Media_Play_Pause}
