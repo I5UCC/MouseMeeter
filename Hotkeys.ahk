@@ -89,6 +89,22 @@ Return
     run, taskkill /PID %active_id% /F,,Hide
 return
 
+^F1::
+    Run, explorer.exe
+return
+
+^F2::
+    Run, "C:\Program Files\Mozilla Firefox\firefox.exe", "C:\Program Files\Mozilla Firefox\"
+return
+
+^F3::
+    Run, "C:\Program Files (x86)\GOG Galaxy\GalaxyClient.exe", "C:\Program Files (x86)\GOG Galaxy\"
+return
+
+^F4::
+    Run, ubuntu.exe
+return
+
 ;Controller-HOTKEYS
 ~$vk07::
     SysGet, mc, MonitorCount
