@@ -1,87 +1,22 @@
 ﻿#SingleInstance ignore
 #NoTrayIcon
 #NoEnv
-#MaxHotkeysPerInterval 2000
 SendMode Input
 
 ;RESET
+Hotkey, WheelUp, Volume_Up
+Hotkey, WheelDown, Volume_Down
+Hotkey, WheelUp, Off
+Hotkey, WheelDown, Off
 If (GetKeyState("JoyInfo")) {
     TV_Mode()
 }
 Else {
     MonitorMode()
     VoicemeeterCMD()
+    Run, powercfg -change -monitor-timeout-ac 0,,Hide
 }
 CMD("w32tm.exe", "C:\Windows\System32", True)
-
-;Mouse-HOTKEYS
-WheelUp::
-    If (GetKeyState("XButton1", "P") || GetKeyState("XButton2", "P"))
-        state := "WheelUp"
-    Else
-        Send, {WheelUp}
-Return
-
-WheelDown::
-    If (GetKeyState("XButton1", "P") || GetKeyState("XButton2", "P"))
-        state := "WheelDown"
-    Else
-        Send, {WheelDown}
-Return
-
-MButton:: 
-    If (GetKeyState("XButton2", "P"))
-        state := "MButton"
-    Else
-        Send, {MButton}
-Return
-
-XButton1::
-    While, GetKeyState("XButton1", "P")
-    {
-        switch state
-        {
-            case "WheelUp":
-                Send, {Volume_Up}
-                state := "done"
-            case "WheelDown":
-                Send, {Volume_Down}
-                state := "done"
-        }
-    }
-    If (!state)
-        Send, {XButton1}
-
-    state := ""
-Return
-
-XButton2::
-    While, GetKeyState("XButton2", "P")
-    {
-        If (GetKeyState("XButton1", "P")) {
-            Sleep 1000
-            SendMessage, 0x112, 0xF170, 2,, Program Manager
-            state := "done"
-            Return
-        }
-        switch state
-        {
-            case "WheelUp":
-                Send, +{Volume_Up}
-                state := "done"
-            case "WheelDown":
-                Send, +{Volume_Down}
-                state := "done"
-	        case "MButton":
-                Send, {Media_Play_Pause}
-                state := "done"
-        }
-    }
-    If (!state)
-        Send, {XButton2}
-
-    state := ""
-Return
 
 ;KB-HOTKEYS
 ^!F4::
@@ -104,6 +39,72 @@ return
 ^F4::
     Run, ubuntu.exe
 return
+
+;Mouse-HOTKEYS
+XButton1::
+    state := False
+    While GetKeyState("XButton1", "P") {
+        toggleHotkeys(True)
+    }
+    toggleHotkeys(False)
+Return
+
+XButton1 Up::
+    If (!state) {
+        Send, {XButton1}
+    }
+Return
+
+XButton2::
+    state := False
+    While GetKeyState("XButton2", "P") {
+        toggleHotkeys(True)
+    }
+    toggleHotkeys(False)
+Return
+
+XButton2 Up::
+    If (!state) {
+        Send, {XButton2}
+    }
+Return
+
+Volume_Up:
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) {
+        Send, ^{Volume_Up}
+    }
+    Else If (GetKeyState("XButton1","P")) {
+        Send, {Volume_Up}
+    }
+    Else If (GetKeyState("XButton2","P")) {
+        Send, +{Volume_Up}
+    }
+    state := True
+Return
+
+Volume_Down:
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) {
+        Send, ^{Volume_Down}
+    }
+    Else If (GetKeyState("XButton1","P")) {
+        Send, {Volume_Down}
+    }
+    Else If (GetKeyState("XButton2","P")) {
+        Send, +{Volume_Down}
+    }
+    state := True
+Return
+
+Insert::
+    KeyWait, Insert
+    KeyWait, Insert, D T0.2
+    If (!errorlevel) {
+        toogleMonitorTimeout()
+    }
+    Else {
+        Send, !{Insert}
+    }
+Return
 
 ;Controller-HOTKEYS
 ~$vk07::
@@ -143,10 +144,9 @@ MonitorMode(mode:="PC") {
 }
 
 VoicemeeterCMD(cmd:="reset") {
-    switch cmd 
-    {
-        case "reset": Send, {Home}
-        case "TV": Send, {PrintScreen}
+    switch cmd {
+        case "reset": Send, ^{Home}
+        case "TV": Send, ^{PrintScreen}
     }
 }
 
@@ -160,4 +160,28 @@ TV_Mode() {
     Process, Close, easyrp.exe
     MonitorMode()
     VoicemeeterCMD()
+}
+
+toggleHotkeys(sw) {
+    If (sw) {
+        Hotkey, WheelUp, On
+        Hotkey, WheelDown, On
+    }
+    Else {
+        Hotkey, WheelUp, Off
+        Hotkey, WheelDown, Off
+    }
+}
+
+toogleMonitorTimeout() {
+    global tout
+    If (tout) {
+        Run, powercfg -change -monitor-timeout-ac 0,,Hide
+        MsgBox, 64, Timeout changed, Timeout changed to Never, 2
+    }
+    Else {
+        Run, powercfg -change -monitor-timeout-ac 1,,Hide
+        MsgBox, 64, Timeout changed, Timeout changed to 1 Minute, 2
+    }
+    tout := !tout
 }
