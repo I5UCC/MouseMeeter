@@ -3,123 +3,25 @@
 #NoEnv
 SendMode Input
 
-;RESET
-Hotkey, WheelUp, Volume_Up
-Hotkey, WheelDown, Volume_Down
-Hotkey, WheelUp, Off
-Hotkey, WheelDown, Off
-If (GetKeyState("JoyInfo")) {
-    TV_Mode()
-}
-Else {
-    MonitorMode()
-    VoicemeeterCMD()
-    Run, powercfg -change -monitor-timeout-ac 0,,Hide
-}
-CMD("w32tm.exe", "C:\Windows\System32", True)
-
-;KB-HOTKEYS
-^!F4::
-    WinGet, active_id, PID, A
-    run, taskkill /PID %active_id% /F,,Hide
-return
-
-^F1::
-    Run, explorer.exe
-return
-
-^F2::
-    Run, "C:\Program Files\Mozilla Firefox\firefox.exe", "C:\Program Files\Mozilla Firefox\"
-return
-
-^F3::
-    Run, "C:\Program Files (x86)\GOG Galaxy\GalaxyClient.exe", "C:\Program Files (x86)\GOG Galaxy\"
-return
-
-^F4::
-    Run, ubuntu.exe
-return
-
-;Mouse-HOTKEYS
-XButton1::
-    state := False
-    While GetKeyState("XButton1", "P") {
-        toggleHotkeys(True)
-    }
-    toggleHotkeys(False)
-Return
-
-XButton1 Up::
-    If (!state) {
-        Send, {XButton1}
-    }
-Return
-
-XButton2::
-    state := False
-    While GetKeyState("XButton2", "P") {
-        toggleHotkeys(True)
-    }
-    toggleHotkeys(False)
-Return
-
-XButton2 Up::
-    If (!state) {
-        Send, {XButton2}
-    }
-Return
-
-Volume_Up:
-    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) {
-        Send, ^{Volume_Up}
-    }
-    Else If (GetKeyState("XButton1","P")) {
-        Send, {Volume_Up}
-    }
-    Else If (GetKeyState("XButton2","P")) {
-        Send, +{Volume_Up}
-    }
-    state := True
-Return
-
-Volume_Down:
-    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) {
-        Send, ^{Volume_Down}
-    }
-    Else If (GetKeyState("XButton1","P")) {
-        Send, {Volume_Down}
-    }
-    Else If (GetKeyState("XButton2","P")) {
-        Send, +{Volume_Down}
-    }
-    state := True
-Return
-
-Insert::
-    KeyWait, Insert
-    KeyWait, Insert, D T0.2
-    If (!errorlevel) {
-        toogleMonitorTimeout()
-    }
-    Else {
-        Send, !{Insert}
-    }
-Return
-
-;Controller-HOTKEYS
-~$vk07::
-    SysGet, mc, MonitorCount
-    If (mc == 3) {
-        Loop {
-            Sleep, 300
-        } Until (GetKeyState("vk07") == "0")
-        Sleep, 1000
-        If (GetKeyState("JoyInfo"))
-            TV_Mode()
-    }
-Return
+RESET()
 
 ;FUNCTIONS
+RESET() {
+    Hotkey, WheelUp, Volume_Up
+    Hotkey, WheelDown, Volume_Down
+    Hotkey, WheelUp, Off
+    Hotkey, WheelDown, Off
+    If (GetKeyState("JoyInfo")) {
+        TV_Mode()
+    }
+    Else {
+        MonitorMode()
+        VoicemeeterCMD()
+        Run, powercfg -change -monitor-timeout-ac 0,,Hide
+    }
+    CMD("w32tm.exe", "C:\Windows\System32", True)
+}
+
 CMD(cmd, Directory, bhide:=False) {
     If Directory not contains :
         Directory = %A_ScriptDir%%Directory%
@@ -129,7 +31,7 @@ CMD(cmd, Directory, bhide:=False) {
     Sleep 200
 }
 
-BraviaCommand(cmd, ip:="192.168.178.25") {
+BraviaCommand(cmd, ip:="192.168.178.12") {
     command = "py bravia_console.py -i %ip% -c %cmd%"
     CMD(command, "\BraviaCtrl", True)
     Sleep 2000
@@ -185,3 +87,92 @@ toogleMonitorTimeout() {
     }
     tout := !tout
 }
+
+;KB-HOTKEYS
+^!F4::
+    WinGet, active_id, PID, A
+    run, taskkill /PID %active_id% /F,,Hide
+return
+
+^F1::
+    Run, explorer.exe
+return
+
+^F2::
+    Run, "C:\Program Files\Mozilla Firefox\firefox.exe", "C:\Program Files\Mozilla Firefox\"
+return
+
+^F3::
+    Run, "C:\Program Files (x86)\GOG Galaxy\GalaxyClient.exe", "C:\Program Files (x86)\GOG Galaxy\"
+return
+
+^F4::
+    Run, ubuntu.exe
+return
+
+;Mouse-HOTKEYS
+XButton1::
+    state := False
+    While GetKeyState("XButton1", "P")
+        toggleHotkeys(True)
+    toggleHotkeys(False)
+Return
+
+XButton1 Up::
+    If (!state)
+        Send, {XButton1}
+Return
+
+XButton2::
+    state := False
+    While GetKeyState("XButton2", "P")
+        toggleHotkeys(True)
+    toggleHotkeys(False)
+Return
+
+XButton2 Up::
+    If (!state)
+        Send, {XButton2}
+Return
+
+Volume_Up:
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
+        Send, ^{Volume_Up}
+    Else If (GetKeyState("XButton1","P"))
+        Send, {Volume_Up}
+    Else If (GetKeyState("XButton2","P"))
+        Send, +{Volume_Up}
+    state := True
+Return
+
+Volume_Down:
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
+        Send, ^{Volume_Down}
+    Else If (GetKeyState("XButton1","P"))
+        Send, {Volume_Down}
+    Else If (GetKeyState("XButton2","P"))
+        Send, +{Volume_Down}
+    state := True
+Return
+
+Insert::
+    KeyWait, Insert
+    KeyWait, Insert, D T0.2
+    If (!errorlevel)
+        toogleMonitorTimeout()
+    Else
+        Send, !{Insert}
+Return
+
+;Controller-HOTKEYS
+~$vk07::
+    SysGet, mc, MonitorCount
+    If (mc == 3) {
+        Loop {
+            Sleep, 300
+        } Until (GetKeyState("vk07") == "0")
+        Sleep, 1000
+        If (GetKeyState("JoyInfo"))
+            TV_Mode()
+    }
+Return
