@@ -1,16 +1,24 @@
 ﻿#SingleInstance ignore
-#NoTrayIcon
+;#NoTrayIcon
 #NoEnv
 SendMode Input
 
-RESET()
+INIT_and_RESET()
 
 ;FUNCTIONS
-RESET() {
+INIT_and_RESET() {
+    Hotkey, LButton, TRIG_LButton
+    Hotkey, RButton, TRIG_RButton
+    Hotkey, MButton, TRIG_MButton
+    Hotkey, LButton, Off
+    Hotkey, RButton, Off
+    Hotkey, MButton, Off
+
     Hotkey, WheelUp, Volume_Up
     Hotkey, WheelDown, Volume_Down
     Hotkey, WheelUp, Off
     Hotkey, WheelDown, Off
+
     If (GetKeyState("JoyInfo")) {
         TV_Mode()
     }
@@ -54,7 +62,7 @@ VoicemeeterCMD(cmd:="reset") {
 
 TV_Mode() {
     MonitorMode("TV")
-    BraviaCommand("hdmi3")
+    ;BraviaCommand("hdmi3")
     CMD("easyrp.exe", "\EasyRP", True)
     MouseMove, 0, 1080
     VoicemeeterCMD("TV")
@@ -68,10 +76,16 @@ toggleHotkeys(sw) {
     If (sw) {
         Hotkey, WheelUp, On
         Hotkey, WheelDown, On
+        Hotkey, LButton, On
+        Hotkey, RButton, On
+        Hotkey, MButton, On
     }
     Else {
         Hotkey, WheelUp, Off
         Hotkey, WheelDown, Off
+        Hotkey, LButton, Off
+        Hotkey, RButton, Off
+        Hotkey, MButton, Off
     }
 }
 
@@ -89,25 +103,11 @@ toogleMonitorTimeout() {
 }
 
 ;KB-HOTKEYS
+CapsLock::Ctrl
+
 ^!F4::
     WinGet, active_id, PID, A
     run, taskkill /PID %active_id% /F,,Hide
-return
-
-^F1::
-    Run, explorer.exe
-return
-
-^F2::
-    Run, "C:\Program Files\Mozilla Firefox\firefox.exe", "C:\Program Files\Mozilla Firefox\"
-return
-
-^F3::
-    Run, "C:\Program Files (x86)\GOG Galaxy\GalaxyClient.exe", "C:\Program Files (x86)\GOG Galaxy\"
-return
-
-^F4::
-    Run, ubuntu.exe
 return
 
 ;Mouse-HOTKEYS
@@ -152,6 +152,45 @@ Volume_Down:
         Send, {Volume_Down}
     Else If (GetKeyState("XButton2","P"))
         Send, +{Volume_Down}
+    state := True
+Return
+
+TRIG_LButton:
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) {
+
+    }
+    Else If (GetKeyState("XButton1","P")) {
+
+    }
+    Else If (GetKeyState("XButton2","P")) {
+        Send, {Media_Prev}
+    }
+    state := True
+Return
+
+TRIG_RButton:
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) {
+
+    }
+    Else If (GetKeyState("XButton1","P")) {
+
+    }
+    Else If (GetKeyState("XButton2","P")) {
+        Send, {Media_Next}
+    }
+    state := True
+Return
+
+TRIG_MButton:
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) {
+
+    }
+    Else If (GetKeyState("XButton1","P")) {
+
+    }
+    Else If (GetKeyState("XButton2","P")) {
+        Send, {Media_Play_Pause}
+    }
     state := True
 Return
 
