@@ -5,14 +5,9 @@
 SendMode Input
 
 setHotkeyState(False)
-syncTime()
+MonitorMode()
 toogleMonitorTimeout(False)
-SysGet, mc, MonitorCount
-If (GetKeyState("JoyInfo"))
-    MonitorMode("TV")
-Else If (mc != 3)
-    MonitorMode()
-Voicemeeter_CMD()
+syncTime()
 
 CMD(cmd, Directory, bhide:=False) {
     If Directory not contains :
@@ -24,6 +19,17 @@ syncTime() {
     CMD("w32tm.exe", "C:\Windows\System32", True)
 }
 
+Bravia_CMD(cmd, ip:="192.168.178.12") {
+    command = "py bravia_console.py -i %ip% -c %cmd%"
+    CMD(command, "\BraviaCtrl", True)
+    Sleep 2000
+}
+
+MonitorSwitcher_CMD(mode:="PC") {
+    cmd = "MonitorSwitcher.exe -load:%mode%.xml"
+    CMD(cmd, "\MonitorProfileSwitcher", True)
+}
+
 Voicemeeter_CMD(cmd := "reset") {
     switch cmd {
         case "reset": Send, ^{Home}
@@ -31,25 +37,27 @@ Voicemeeter_CMD(cmd := "reset") {
     }
 }
 
-MonitorSwitcher_CMD(mode:="PC") {
-    cmd = "MonitorSwitcher.exe -load:%mode%.xml"
-    CMD(cmd, "\MonitorProfileSwitcher", True)
-    Sleep 3000
-}
-
 MonitorMode(mode := "PC") {
     If (mode == "PC") {
+        SysGet, mcnt, MonitorCount
         MonitorSwitcher_CMD()
+        If (mcnt == 1) {
+            Bravia_CMD("home")
+            Bravia_CMD("poweroff")
+            Sleep 3000
+        }
         Voicemeeter_CMD()
     }
     Else If (mode == "TV") {
         MonitorSwitcher_CMD("TV")
-        Run, "steam://open/bigpicture"
+        Bravia_CMD("wakeup")
+        Bravia_CMD("wakeup")
+        Bravia_CMD("hdmi2")
         CMD("easyrp.exe", "\EasyRP", True)
-        Sleep, 10000
-        Voicemeeter_CMD("TV")
         MouseMove, 0, 1080
-        WinWaitClose, Steam
+        Sleep 2000
+        Voicemeeter_CMD("TV")
+        RunWait, "steam://open/bigpicture"
         Process, Close, easyrp.exe
         MonitorMode()
     }
@@ -87,7 +95,8 @@ toogleMonitorTimeout(Mshow := True) {
 
 turnOffMonitors() {
     Sleep 1000
-    SendMessage, 0x112, 0xF170, 2,, Program Manager
+    ;SendMessage, 0x112, 0xF170, 2,, Program Manager
+    CMD("Turn_off_Screen.bat", "./")
 }
 
 notImpl() {
@@ -95,6 +104,8 @@ notImpl() {
 }
 
 ;KB-HOTKEYS
+CapsLock::Ctrl
+
 ^!F4::
     WinGet, active_id, PID, A
     run, taskkill /PID %active_id% /F,,Hide
@@ -108,16 +119,16 @@ XButton1::
     setHotkeyState(False)
 Return
 
+XButton1 Up::
+    If (!state)
+        Send, {XButton1}
+Return
+
 XButton2::
     state := False
     While GetKeyState("XButton2", "P")
         setHotkeyState(True)
     setHotkeyState(False)
-Return
-
-XButton1 Up::
-    If (!state)
-        Send, {XButton1}
 Return
 
 XButton2 Up::
@@ -132,6 +143,7 @@ WheelUp::
         Send, {Volume_Up}
     Else If (GetKeyState("XButton2","P"))
         Send, +{Volume_Up}
+
     state := True
 Return
 
@@ -147,9 +159,9 @@ Return
 
 LButton::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
-        notImpl() ;#TODO: Implement an action
+        notImpl()
     Else If (GetKeyState("XButton1","P"))
-        notImpl() ;#TODO: Implement an action
+        notImpl()
     Else If (GetKeyState("XButton2","P"))
         Send, {Media_Prev}
     state := True
@@ -157,9 +169,9 @@ Return
 
 RButton::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
-        notImpl() ;#TODO: Implement an action
+        notImpl()
     Else If (GetKeyState("XButton1","P"))
-        notImpl() ;#TODO: Implement an action
+        notImpl()
     Else If (GetKeyState("XButton2","P"))
         Send, {Media_Next}
     state := True
@@ -167,23 +179,11 @@ Return
 
 MButton::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
-        toogleMonitorTimeout()
+        turnOffMonitors()
     Else If (GetKeyState("XButton1","P"))
-        notImpl() ;#TODO: Implement an action
+        notImpl()
     Else If (GetKeyState("XButton2","P")) 
         Send, {Media_Play_Pause}
-    state := True
-Return
-
-*CtrlBreak::
-    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
-        notImpl() ;#TODO: Implement an action
-    Else If (GetKeyState("XButton1","P"))
-        notImpl() ;#TODO: Implement an action
-    Else If (GetKeyState("XButton2","P")) 
-        notImpl() ;#TODO: Implement an action
-    Else 
-        Send, ^{ScrollLock}
     state := True
 Return
 
