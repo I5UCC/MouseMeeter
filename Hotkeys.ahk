@@ -91,7 +91,7 @@ turnOffMonitors() {
 }
 
 notImpl() {
-    MsgBox, 64, NOT IMPLEMENTED, NOT IMPLEMENTED, 5
+    ;MsgBox, 64, NOT IMPLEMENTED, NOT IMPLEMENTED, 5
 }
 
 ;KB-HOTKEYS
@@ -176,13 +176,13 @@ MButton::
 Return
 
 *CtrlBreak::
-    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
-        notImpl() ;#TODO: Implement an action
+     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
+        Send, ^{Volume_Mute}
     Else If (GetKeyState("XButton1","P"))
-        notImpl() ;#TODO: Implement an action
-    Else If (GetKeyState("XButton2","P")) 
-        notImpl() ;#TODO: Implement an action
-    Else 
+        Send, {Volume_Mute}
+    Else If (GetKeyState("XButton2","P"))
+        Send, +{Volume_Mute}
+    Else
         Send, ^{ScrollLock}
     state := True
 Return
