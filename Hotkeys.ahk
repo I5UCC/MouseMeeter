@@ -14,6 +14,20 @@ Else If (mc != 3)
     MonitorMode()
 Voicemeeter_CMD()
 
+Process, Wait, NVIDIA RTX Voice.exe
+CMD("wmic process where name='NVIDIA RTX Voice.exe' call setpriority 256","C:\Windows\System32", True)
+Process, Wait, voicemeeter8.exe
+CMD("wmic process where name='voicemeeter8.exe' call setpriority 256","C:\Windows\System32", True)
+
+Loop {
+    WinWaitActive, Oculus
+    Sleep, 8000
+    Run, "VR_MODE.exe", %A_ScriptDir%
+    Voicemeeter_CMD("VR")
+    WinWaitClose, Oculus
+    Voicemeeter_CMD()
+}
+
 CMD(cmd, Directory, bhide:=False) {
     If Directory not contains :
         Directory = %A_ScriptDir%%Directory%
@@ -26,8 +40,9 @@ syncTime() {
 
 Voicemeeter_CMD(cmd := "reset") {
     switch cmd {
-        case "reset": Send, ^{Home}
-        case "TV": Send, ^{PrintScreen}
+        case "reset": Send, {F13}
+        case "TV": Send, {F14}
+        case "VR": Send, {F16}
     }
 }
 
@@ -183,7 +198,7 @@ Return
     Else If (GetKeyState("XButton2","P"))
         Send, +{Volume_Mute}
     Else
-        Send, ^{ScrollLock}
+        Send, {F15}
     state := True
 Return
 
