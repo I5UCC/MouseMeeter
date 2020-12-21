@@ -1,11 +1,10 @@
 ﻿#SingleInstance ignore
-#Persistent
 #NoTrayIcon
 #NoEnv
 SendMode Input
 SetWorkingDir %A_ScriptDir%/auto_oculus_touch
 
-#include auto_oculus_touch/auto_oculus_touch.ahk
+#include auto_oculus_touch.ahk
 InitOculus()
 
 Loop {

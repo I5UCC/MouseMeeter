@@ -3,6 +3,7 @@
 #NoTrayIcon
 #NoEnv
 SendMode Input
+#include auto_oculus_touch.ahk
 
 setHotkeyState(False)
 syncTime()
@@ -21,10 +22,27 @@ CMD("wmic process where name='voicemeeter8.exe' call setpriority 256","C:\Window
 
 Loop {
     WinWaitActive, Oculus
-    Sleep, 8000
-    Run, "VR_MODE.exe", %A_ScriptDir%
+    Sleep, 2000
     Voicemeeter_CMD("VR")
-    WinWaitClose, Oculus
+    
+    InitOculus()
+    Loop {
+        Poll()
+        down     := GetButtonsDown()
+        ;pressed  := GetButtonsPressed()
+        ;released := GetButtonsReleased()
+        rightY   := GetThumbStick(RightHand, YAxis)
+
+        if (rightY >= 0.7) && ovrRThumb & down
+            SendInput {Volume_Up}
+        else if (rightY <= -0.7) && ovrRThumb & down
+            SendInput {Volume_Down}
+
+        Sleep 50
+        if !WinExist("Oculus")
+            break
+    }
+    ;WinWaitClose, Oculus
     Voicemeeter_CMD()
 }
 
