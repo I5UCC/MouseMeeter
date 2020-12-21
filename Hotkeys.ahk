@@ -16,9 +16,10 @@ Else If (mc != 3)
 Voicemeeter_CMD()
 
 Process, Wait, NVIDIA RTX Voice.exe
-CMD("wmic process where name='NVIDIA RTX Voice.exe' call setpriority 256","C:\Windows\System32", True)
+CMD("wmic process where name='NVIDIA RTX Voice.exe' call setpriority 128","C:\Windows\System32", True)
 Process, Wait, voicemeeter8.exe
-CMD("wmic process where name='voicemeeter8.exe' call setpriority 256","C:\Windows\System32", True)
+CMD("wmic process where name='voicemeeter8.exe' call setpriority 32768","C:\Windows\System32", True)
+CMD("wmic process where name='VoicemeeterMacroButtons.exe' call setpriority 32768","C:\Windows\System32", True)
 
 Loop {
     WinWaitActive, Oculus
