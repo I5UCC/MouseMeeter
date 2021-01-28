@@ -2,49 +2,29 @@
 #Persistent
 #NoTrayIcon
 #NoEnv
+SetWorkingDir %A_ScriptDir%
 SendMode Input
-#include auto_oculus_touch.ahk
 
 setHotkeyState(False)
-syncTime()
-toogleMonitorTimeout(False)
+setProcessPriorities()
+CMD("w32tm.exe /resync", "C:\Windows\System32", True)
 SysGet, mc, MonitorCount
 If (GetKeyState("JoyInfo"))
-    MonitorMode("TV")
+    setMode("TV")
 Else If (mc != 3)
-    MonitorMode()
-Voicemeeter_CMD()
-
-Process, Wait, NVIDIA RTX Voice.exe
-CMD("wmic process where name='NVIDIA RTX Voice.exe' call setpriority 128","C:\Windows\System32", True)
-Process, Wait, voicemeeter8.exe
-CMD("wmic process where name='voicemeeter8.exe' call setpriority 32768","C:\Windows\System32", True)
-CMD("wmic process where name='VoicemeeterMacroButtons.exe' call setpriority 32768","C:\Windows\System32", True)
-
+    setMode("PC")
 Loop {
-    WinWaitActive, Oculus
-    Sleep, 2000
-    Voicemeeter_CMD("VR")
-    
-    InitOculus()
-    Loop {
-        Poll()
-        down     := GetButtonsDown()
-        ;pressed  := GetButtonsPressed()
-        ;released := GetButtonsReleased()
-        rightY   := GetThumbStick(RightHand, YAxis)
+    Process, Wait, OculusClient.exe
+    Run, auto_oculus_touch/VRVolumeControl.exe, %A_ScriptDir%/auto_oculus_touch
+    Voicemeeter("VR")
+    Process, WaitClose, OculusClient.exe
+    Process, Close, Steam.exe
+    Voicemeeter("RESET")
+}
 
-        if (rightY >= 0.7) && ovrRThumb & down
-            SendInput {Volume_Up}
-        else if (rightY <= -0.7) && ovrRThumb & down
-            SendInput {Volume_Down}
-
-        Sleep 50
-        if !WinExist("Oculus")
-            break
-    }
-    ;WinWaitClose, Oculus
-    Voicemeeter_CMD()
+;Methods
+notImpl() {
+    ;MsgBox, 64, NOT IMPLEMENTED, NOT IMPLEMENTED, 5
 }
 
 CMD(cmd, Directory, bhide:=False) {
@@ -53,40 +33,37 @@ CMD(cmd, Directory, bhide:=False) {
     Run, %ComSpec% /c %cmd%, %Directory%, (bhide ? Hide : Show)
 }
 
-syncTime() {
-    CMD("w32tm.exe", "C:\Windows\System32", True)
-}
+Voicemeeter(macrolabel) {
+    switch macrolabel {
+        case "RESET": Send, ^{F13}
+        
+        ;Modes
+        case "TV": Send, ^{F14}
+        case "VR": Send, ^{F16}
+        case "Speakers": Send, ^{F15}
+        case "Bluetooth": Send, ^{F17}
+        
+        ;Main
+        case "MainVolUp": Send, {Volume_Up}
+        case "MainVolDown": Send, {Volume_Down}
+        case "MainMute": Send, {Volume_Mute}
 
-Voicemeeter_CMD(cmd := "reset") {
-    switch cmd {
-        case "reset": Send, {F13}
-        case "TV": Send, {F14}
-        case "VR": Send, {F16}
+        ;Media
+        case "MediaVolUp": Send, +{Volume_Up}
+        case "MediaVolDown": Send, +{Volume_Down}
+        case "MediaMute": Send, +{Volume_Mute}
+
+        ;VOIP
+        case "VOIPVolUp": Send, ^{Volume_Up}
+        case "VOIPVolDown": Send, ^{Volume_Down}
+        case "VOIPMute": Send, ^{Volume_Mute}
     }
 }
 
-MonitorSwitcher_CMD(mode:="PC") {
+MonitorSwitcher(mode:="PC") {
     cmd = "MonitorSwitcher.exe -load:%mode%.xml"
     CMD(cmd, "\MonitorProfileSwitcher", True)
     Sleep 3000
-}
-
-MonitorMode(mode := "PC") {
-    If (mode == "PC") {
-        MonitorSwitcher_CMD()
-        Voicemeeter_CMD()
-    }
-    Else If (mode == "TV") {
-        MonitorSwitcher_CMD("TV")
-        Run, "steam://open/bigpicture"
-        CMD("easyrp.exe", "\EasyRP", True)
-        Sleep, 10000
-        Voicemeeter_CMD("TV")
-        MouseMove, 0, 1080
-        WinWaitClose, Steam
-        Process, Close, easyrp.exe
-        MonitorMode()
-    }
 }
 
 setHotkeyState(sw) {
@@ -106,26 +83,34 @@ setHotkeyState(sw) {
     }
 }
 
-toogleMonitorTimeout(Mshow := True) {
-    global tout
-    tmp := (tout ? 1 : 0)
-
-    c = powercfg -change -monitor-timeout-ac %tmp%
-    CMD(c, "C:\Windows\System32")
-    If (Mshow)
-        MsgBox, 64, Timeout set, Timeout set to %tmp%, 1
-    If (tout)
-        turnOffMonitors()
-    tout := !tout
+setProcessPriorities() {
+    Process, Wait, voicemeeter8.exe
+    Process, Wait, VoicemeeterMacroButtons.exe
+    Process, Wait, Light Host.exe
+    
+    Process, Priority, Hotkeys.exe, H
+    Process, Priority, Light Host.exe, H
+    Process, Priority, voicemeeter8.exe, H
+    Process, Priority, VoicemeeterMacroButtons.exe, A
 }
 
-turnOffMonitors() {
-    Sleep 1000
-    SendMessage, 0x112, 0xF170, 2,, Program Manager
-}
-
-notImpl() {
-    ;MsgBox, 64, NOT IMPLEMENTED, NOT IMPLEMENTED, 5
+setMode(mode) {
+    If (mode == "PC") {
+        MonitorSwitcher()
+        Voicemeeter("RESET")
+    }
+    Else If (mode == "TV") {
+        MsgBox, 64, Switching Monitor Mode, Switching to TV-Mode, 2
+        MonitorSwitcher("TV")
+        Run, "steam://open/bigpicture"
+        CMD("easyrp.exe", "\EasyRP", True)
+        Sleep, 5000
+        Voicemeeter("TV")
+        MouseMove, 0, 2160
+        WinWaitClose, Steam
+        Process, Close, easyrp.exe
+        setMode("PC")
+    }
 }
 
 ;KB-HOTKEYS
@@ -160,64 +145,70 @@ XButton2 Up::
 Return
 
 WheelUp::
-    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
-        Send, ^{Volume_Up}
-    Else If (GetKeyState("XButton1","P"))
-        Send, {Volume_Up}
-    Else If (GetKeyState("XButton2","P"))
-        Send, +{Volume_Up}
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
+        Voicemeeter("VOIPVolUp")
+    Else If (GetKeyState("XButton1","P")) ;Main
+        Voicemeeter("MainVolUp")
+    Else If (GetKeyState("XButton2","P")) ;Media
+        Voicemeeter("MediaVolUp")
     state := True
 Return
 
 WheelDown::
-    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
-        Send, ^{Volume_Down}
-    Else If (GetKeyState("XButton1","P"))
-        Send, {Volume_Down}
-    Else If (GetKeyState("XButton2","P"))
-        Send, +{Volume_Down}
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
+        Voicemeeter("VOIPVolDown")
+    Else If (GetKeyState("XButton1","P")) ;Main
+        Voicemeeter("MainVolDown")
+    Else If (GetKeyState("XButton2","P")) ;Media
+        Voicemeeter("MediaVolDown")
     state := True
 Return
 
 LButton::
-    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
         notImpl() ;#TODO: Implement an action
-    Else If (GetKeyState("XButton1","P"))
+    Else If (GetKeyState("XButton1","P")) ;Main
         notImpl() ;#TODO: Implement an action
-    Else If (GetKeyState("XButton2","P"))
+    Else If (GetKeyState("XButton2","P")) ;Media
         Send, {Media_Prev}
     state := True
 Return
 
 RButton::
-    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
         notImpl() ;#TODO: Implement an action
-    Else If (GetKeyState("XButton1","P"))
+    Else If (GetKeyState("XButton1","P")) ;Main
         notImpl() ;#TODO: Implement an action
-    Else If (GetKeyState("XButton2","P"))
+    Else If (GetKeyState("XButton2","P")) ;Media
         Send, {Media_Next}
     state := True
 Return
 
 MButton::
-    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
-        toogleMonitorTimeout()
-    Else If (GetKeyState("XButton1","P"))
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
         notImpl() ;#TODO: Implement an action
-    Else If (GetKeyState("XButton2","P")) 
+    Else If (GetKeyState("XButton1","P")) ;Main
+        notImpl() ;#TODO: Implement an action
+    Else If (GetKeyState("XButton2","P")) ;Media
         Send, {Media_Play_Pause}
     state := True
 Return
 
-*CtrlBreak::
-     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
-        Send, ^{Volume_Mute}
-    Else If (GetKeyState("XButton1","P"))
-        Send, {Volume_Mute}
-    Else If (GetKeyState("XButton2","P"))
-        Send, +{Volume_Mute}
-    Else
-        Send, {F15}
+F24::
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
+        Voicemeeter("VOIPMute")
+    Else If (GetKeyState("XButton1","P")) ;Main
+        Voicemeeter("MainMute")
+    Else If (GetKeyState("XButton2","P")) ;Media
+        Voicemeeter("MediaMute")
+    Else {
+        KeyWait, %A_ThisHotkey%
+        KeyWait, %A_ThisHotkey%, d t0.250 ;Wait for double click
+        If (Errorlevel)
+            Voicemeeter("Speakers")
+        Else
+            Voicemeeter("Bluetooth")
+    }
     state := True
 Return
 
@@ -229,9 +220,7 @@ Return
             Sleep, 300
         } Until (GetKeyState("vk07") == "0")
         Sleep, 1000
-        If (GetKeyState("JoyInfo")) {
-            MsgBox, 64, Switching Monitor Mode, Switching to TV-Mode, 2
-            MonitorMode("TV")
-        }
+        If (GetKeyState("JoyInfo"))
+            setMode("TV")
     }
 Return

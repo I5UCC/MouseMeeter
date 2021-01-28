@@ -2,12 +2,12 @@
 #NoTrayIcon
 #NoEnv
 SendMode Input
-SetWorkingDir %A_ScriptDir%/auto_oculus_touch
 
 #include auto_oculus_touch.ahk
 InitOculus()
 
 Loop {
+    Sleep 55
     Poll()
     down     := GetButtonsDown()
     pressed  := GetButtonsPressed()
@@ -19,7 +19,5 @@ Loop {
     else if (rightY <= -0.7) && ovrRThumb & down
         SendInput {Volume_Down}
 
-    Sleep 50
-    if !WinExist("Oculus")
-        break
-}
+    Process, Exist, OculusClient.exe
+} Until !ErrorLevel
