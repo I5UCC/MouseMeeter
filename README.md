@@ -38,4 +38,4 @@ Releasing Backward/Forward without triggering any of the above macros will just 
 
 ### **! Still in Development !**
 
-Basically all all of the communication with Voicemeeter happens in the Voicemeeter()-Method so modify that. Look into the [Documentation](https://saifaqqad.github.io/VMR.ahk/) of [VMR.ahk](https://github.com/SaifAqqad/VMR.ahk) to know how.
+Basically all of the communication with Voicemeeter happens in the Voicemeeter()-Method so modify that. Look into the [Documentation](https://saifaqqad.github.io/VMR.ahk/) of [VMR.ahk](https://github.com/SaifAqqad/VMR.ahk) to know how.
