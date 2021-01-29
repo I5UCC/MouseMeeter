@@ -1,5 +1,5 @@
 [submodule "VMR.ahk"]
-	path = VMR
+	path = VMR.ahk
 	url = https://github.com/SaifAqqad/VMR.ahk
 	branch = master
 [submodule "auto_oculus_touch"]

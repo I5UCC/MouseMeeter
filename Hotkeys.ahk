@@ -4,7 +4,7 @@
 #NoEnv
 SetWorkingDir %A_ScriptDir%
 SendMode Input
-#Include VMR/VMR.ahk
+#Include VMR.ahk/VMR.ahk
 #include auto_oculus_touch/bin/auto_oculus_touch.ahk
 
 setHotkeyState(False)
