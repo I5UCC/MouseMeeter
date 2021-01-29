@@ -1,0 +1,4 @@
+[submodule "VMR.ahk"]
+	path = VMR.ahk
+	url = https://github.com/SaifAqqad/VMR.ahk
+	branch = master
