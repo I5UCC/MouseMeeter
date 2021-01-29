@@ -1,5 +1,5 @@
 # **! WARNING !**
-This script is heavily adjusted to my system, so some things could not work or not work in the way you want it to. For example it triggers on Oculus startup to automatically switch to Output A3 and change Microphones, it also sets different monitor profiles to switch between. 
+This script is heavily adjusted to my system, so some things could not work at all or in the way you want it to. For example it triggers on Oculus startup to automatically switch to Output A3 and change Microphones, it also sets different monitor profiles to switch between. 
 
 **I also put in a stripped back version in the Archive that does remove almost all of it and just leaves the Voicemeeter macros.**
 
