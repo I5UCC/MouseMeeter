@@ -2,3 +2,7 @@
 	path = VMR.ahk
 	url = https://github.com/SaifAqqad/VMR.ahk
 	branch = master
+[submodule "auto_oculus_touch"]
+	path = auto_oculus_touch
+	url = https://github.com/rajetic/auto_oculus_touch
+	branch = master
