@@ -4,7 +4,8 @@
 #NoEnv
 SetWorkingDir %A_ScriptDir%
 SendMode Input
-#Include, VMR.ahk
+#Include VMR/VMR.ahk
+#include auto_oculus_touch/bin/auto_oculus_touch.ahk
 
 setHotkeyState(False)
 setProcessPriorities()
@@ -22,8 +23,25 @@ Voicemeeter("RESET")
 
 Loop {
     Process, Wait, OculusClient.exe
-    Run, auto_oculus_touch/VRVolumeControl.exe, %A_ScriptDir%/auto_oculus_touch
     Voicemeeter("VR")
+    
+    InitOculus()
+    Loop {
+        Sleep 55
+        Poll()
+        down     := GetButtonsDown()
+        pressed  := GetButtonsPressed()
+        released := GetButtonsReleased()
+        rightY        := GetThumbStick(RightHand, YAxis)
+
+        if (rightY >= 0.7) && ovrRThumb & down
+            SendInput {Volume_Up}
+        else if (rightY <= -0.7) && ovrRThumb & down
+            SendInput {Volume_Down}
+
+        Process, Exist, OculusClient.exe
+    } Until !ErrorLevel
+
     Process, WaitClose, OculusClient.exe
     Process, Close, Steam.exe
     Voicemeeter("RESET")
