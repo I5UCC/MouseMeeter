@@ -3,7 +3,7 @@ This script is heavily adjusted to my system, so some things could not work at a
 
 ### **I also put in a stripped back version in the Archive that does remove almost all of it and just leaves the Voicemeeter macros. Use that or change the default version to your systems settings**
 
-### **It is Open-Source, so you can change it yourself**, maybe I will make it a bit more user friendly in the future.
+### ***It is Open-Source, so you can change it yourself***, maybe I will make it a bit more user friendly in the future.
 
 # WHotkeys
 An Autohotkey script to bind mouse keys to do Voicemeeter commands.
