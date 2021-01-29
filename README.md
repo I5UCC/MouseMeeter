@@ -12,20 +12,20 @@ Macros:
 
 | Macro | Action |
 | --- | --- |
-| Backward + WheelUp   | VAIO Volume increase by 0.5 |
-| Backward + WheelDown | VAIO Volume decrease by 0.5 |
-| Forward + WheelUp | AUX Volume increase by 0.5 |
-| Forward + WheelDown | AUX Volume decrease by 0.5 |
-| Backward + Forward + WheelUp | VAIO3 Volume increase by 0.5 |
-| Backward + Forward + WheelDown | VAIO3 Volume decrease by 0.5 |
-| Forward + LButton | Media_Prev |
-| Forward + RButton | Media_Next |
-| Forward + MButton | Media_Play_Pause |
+| Backward+WheelUp   | VAIO Volume increase by 0.5 |
+| Backward+WheelDown | VAIO Volume decrease by 0.5 |
+| Forward+WheelUp | AUX Volume increase by 0.5 |
+| Forward+WheelDown | AUX Volume decrease by 0.5 |
+| Backward+Forward + WheelUp | VAIO3 Volume increase by 0.5 |
+| Backward+Forward + WheelDown | VAIO3 Volume decrease by 0.5 |
+| Forward+LButton | Media_Prev |
+| Forward+RButton | Media_Next |
+| Forward+MButton | Media_Play_Pause |
 | F24 (F24 binded to an extra button on the mouse) | switch to output A2 |
 | double F24 | switch to output A5 |
-| Forward + F24 | AUX Mute |
-| Backward + F24 | VAIO Mute |
-| Backward + Forward + F24 | VAIO3 Mute |
+| Forward+F24 | AUX Mute |
+| Backward+F24 | VAIO Mute |
+| Backward+Forward + F24 | VAIO3 Mute |
 | Ctrl+Shift+R | Reset to Voicemeeter predefined defaults |
 | Ctrl+Alt+F4 | Force close Active window (Something like [SuperF4](https://stefansundin.github.io/superf4/)) |
 | Xbox Button | Changes into "TV"-Mode |
