@@ -4,7 +4,6 @@
 #NoEnv
 SetWorkingDir %A_ScriptDir%
 SendMode Input
-#Include, VMR.ahk
 
 setHotkeyState(False)
 setProcessPriorities()
@@ -14,12 +13,6 @@ If (GetKeyState("JoyInfo"))
     setMode("TV")
 Else If (mc != 3)
     setMode("PC")
-
-global voicemeeter
-voicemeeter := new VMR()
-voicemeeter.login()
-Voicemeeter("RESET")
-
 Loop {
     Process, Wait, OculusClient.exe
     Run, auto_oculus_touch/VRVolumeControl.exe, %A_ScriptDir%/auto_oculus_touch
@@ -40,87 +33,30 @@ CMD(cmd, Directory, bhide:=False) {
     Run, %ComSpec% /c %cmd%, %Directory%, (bhide ? Hide : Show)
 }
 
-Voicemeeter_setMainOutput(output, unmute := False) {
-    for i, strip in voicemeeter.strip {
-        If (i > 5) {
-            strip.A1 := 0
-            strip.A2 := 0
-            strip.A3 := 0
-            strip.A4 := 0
-            strip.A5 := 0
-            switch output {
-                case "A1": strip.A1 := -1
-                case "A2": strip.A2 := -1
-                case "A3": strip.A3 := -1
-                case "A4": strip.A4 := -1
-                case "A5": strip.A5 := -1
-            }
-            If (unmute)
-                strip.mute := 0
-        }
-    }
-}
-
 Voicemeeter(macrolabel) {
     switch macrolabel {
-        case "RESET":
-            Voicemeeter_setMainOutput("A1",True)
-            voicemeeter.strip[1].device["wdm"]:= "Microphone (HyperX Quadcast)"
-            voicemeeter.strip[1].Color_x := -0.23
-            voicemeeter.strip[1].Color_y = +0.37
-
-            voicemeeter.strip[6].gain := -20
-            voicemeeter.strip[7].gain := -20
-            voicemeeter.strip[8].gain := -10
-            voicemeeter.command.restart()
-        Return
-
+        case "RESET": Send, ^{F13}
+        
         ;Modes
-        case "TV":
-            Voicemeeter_setMainOutput("A4")
-            voicemeeter.strip[6].gain := 0
-            voicemeeter.strip[7].gain := 0
-            voicemeeter.strip[8].mute := -1
-        Return
-        case "VR":
-            Voicemeeter_setMainOutput("A3")
-            voicemeeter.strip[1].device["mme"]:= "VR (2- Rift S)"
-            voicemeeter.strip[6].gain := -20
-            voicemeeter.strip[7].gain := -20
-            voicemeeter.strip[8].gain := -10
-        Return
-        case "Speakers":
-            If (voicemeeter.strip[6].A2) {
-                Voicemeeter_setMainOutput("A1")
-            }
-            Else {
-                Voicemeeter_setMainOutput("A2")
-            }
-        Return
-        case "Bluetooth":
-            If (voicemeeter.strip[6].A5) {
-                Voicemeeter_setMainOutput("A1")
-            }
-            Else {
-                Voicemeeter_setMainOutput("A5")
-                voicemeeter.command.restart()
-            }
-        Return
-
+        case "TV": Send, ^{F14}
+        case "VR": Send, ^{F16}
+        case "Speakers": Send, ^{F15}
+        case "Bluetooth": Send, ^{F17}
+        
         ;Main
-        case "MainVolUp": voicemeeter.strip[6].gain += 0.5
-        case "MainVolDown": voicemeeter.strip[6].gain -= 0.5
-        case "MainMute": voicemeeter.strip[6].mute--
+        case "MainVolUp": Send, {Volume_Up}
+        case "MainVolDown": Send, {Volume_Down}
+        case "MainMute": Send, {Volume_Mute}
 
         ;Media
-        case "MediaVolUp": voicemeeter.strip[7].gain += 0.5
-        case "MediaVolDown": voicemeeter.strip[7].gain -= 0.5
-        case "MediaMute": voicemeeter.strip[7].mute--
+        case "MediaVolUp": Send, +{Volume_Up}
+        case "MediaVolDown": Send, +{Volume_Down}
+        case "MediaMute": Send, +{Volume_Mute}
 
         ;VOIP
-        case "VOIPVolUp": voicemeeter.strip[8].gain += 0.5
-        case "VOIPVolDown": voicemeeter.strip[8].gain -= 0.5
-        case "VOIPMute": voicemeeter.strip[8].mute--
+        case "VOIPVolUp": Send, ^{Volume_Up}
+        case "VOIPVolDown": Send, ^{Volume_Down}
+        case "VOIPMute": Send, ^{Volume_Mute}
     }
 }
 
@@ -149,11 +85,13 @@ setHotkeyState(sw) {
 
 setProcessPriorities() {
     Process, Wait, voicemeeter8.exe
+    Process, Wait, VoicemeeterMacroButtons.exe
     Process, Wait, Light Host.exe
     
     Process, Priority, Hotkeys.exe, H
     Process, Priority, Light Host.exe, H
     Process, Priority, voicemeeter8.exe, H
+    Process, Priority, VoicemeeterMacroButtons.exe, A
 }
 
 setMode(mode) {
@@ -180,8 +118,6 @@ setMode(mode) {
     WinGet, active_id, PID, A
     run, taskkill /PID %active_id% /F,,Hide
 return
-
-^+R:: voicemeeter.command.restart()
 
 ;Mouse-HOTKEYS
 XButton1::
