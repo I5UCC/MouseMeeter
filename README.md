@@ -30,7 +30,6 @@ Macros:
 | Backward+Forward+F24 | VAIO3 Mute |
 | Ctrl+Shift+R | Reset to Voicemeeter predefined defaults |
 | Ctrl+Alt+F4 | Force close Active window (Something like [SuperF4](https://stefansundin.github.io/superf4/)) |
-| Xbox Button | Changes into "TV"-Mode |
 
 Releasing Backward/Forward without triggering any of the above macros will just send Backward/Forward again
 
