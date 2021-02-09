@@ -87,7 +87,7 @@ setMode(mode) {
     }
     Else If (mode == "VR") {
         voicemeeter.cmd("VR")
-        RunWait, OculusVolumeControl.ahk
+        RunWait, %A_WorkingDir%/VOTVolumeControl/VOTVolumeControl.ahk
         voicemeeter.cmd("RESET")
         Process, Close, Steam.exe
     }
