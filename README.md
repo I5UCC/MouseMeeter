@@ -5,6 +5,8 @@ These sidebuttons are normally used to go "Forward" or "Backward" on a page, the
 
 Macros:
 
+![Example picture](https://i.imgur.com/xqwWpx9.png)
+
 | Macro | Action |
 | --- | --- |
 | Backward+WheelUp   | VAIO Volume increase by 0.5 |
