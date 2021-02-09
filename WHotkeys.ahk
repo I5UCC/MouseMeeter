@@ -5,53 +5,25 @@
 SetWorkingDir %A_ScriptDir%
 SendMode Input
 #Include VMR.ahk/VMR.ahk
-#include auto_oculus_touch.ahk
 
 global voicemeeter
 global state
-Init()
 
+Init()
 Loop {
     Process, Wait, OculusClient.exe
-    Voicemeeter("VR")
-    
-    InitOculus()
-    Loop {
-        Sleep 55
-        Poll()
-        down                := GetButtonsDown()
-        pressed             := GetButtonsPressed()
-        released            := GetButtonsReleased()
-        rightY              := GetThumbStick(RightHand, YAxis)
-        leftY               := GetThumbStick(LeftHand, YAxis)
-        leftHandTrigger     := GetAxis(AxisHandTriggerLeft)
-        rightHandTrigger    := GetAxis(AxisHandTriggerRight)
-
-        if (rightY >= 0.7) && (rightHandTrigger >= 0.7) && ovrRThumb & down
-            Voicemeeter("MainVolUp")
-        else if (rightY <= -0.7) && (rightHandTrigger >= 0.7) && ovrRThumb & down
-            Voicemeeter("MainVolDown")
-        else if (leftY >= 0.7) && (leftHandTrigger >= 0.7) && ovrLThumb & down
-            Voicemeeter("MediaVolUp")
-        else if (leftY <= -0.7) && (leftHandTrigger >= 0.7) && ovrLThumb & down
-            Voicemeeter("MediaVolDown")
-
-        Process, Exist, OculusClient.exe
-    } Until !ErrorLevel
-
-    Process, Close, Steam.exe
-    Voicemeeter("RESET")
+    setMode("VR")
 }
 
 Init() {
     setHotkeyState(False)
-    voicemeeter := new VMR()
-    voicemeeter.login()
-    Voicemeeter("RESET")
+
+    voicemeeter := new Voicemeeter()
+    voicemeeter.cmd("RESET")
 
     CMD("w32tm.exe /resync", "C:\Windows\System32", True)
     CMD("powercfg.exe /SETACTIVE 381b4222-f694-41f0-9685-ff5bb260df2e", "C:\Windows\System32", True)
-    Process, Priority,, High
+    Process, Priority, ,High
     Process, Wait, Light Host.exe
     Process, Priority, Light Host.exe, H
     Process, Wait, voicemeeter8.exe
@@ -75,101 +47,8 @@ CMD(cmd, Directory, bhide:=False) {
     Run, %ComSpec% /c %cmd%, %Directory%, (bhide ? Hide : Show)
 }
 
-Voicemeeter_setMainOutput(output, unmute := False) {
-    for i, strip in voicemeeter.strip {
-        If (i > 5) {
-            strip.A1 := 0
-            strip.A2 := 0
-            strip.A3 := 0
-            strip.A4 := 0
-            strip.A5 := 0
-            switch output {
-                case "A1": strip.A1 := -1
-                case "A2": strip.A2 := -1
-                case "A3": strip.A3 := -1
-                case "A4": strip.A4 := -1
-                case "A5": strip.A5 := -1
-            }
-        }
-        If (unmute)
-            strip.mute := 0
-    }
-}
-
-Voicemeeter(macrolabel) {
-    switch macrolabel {
-        case "RESET":
-            Voicemeeter_setMainOutput("A1", True)
-            voicemeeter.strip[1].device["mme"]:= "Quadcast (HyperX Quadcast)"
-            voicemeeter.strip[1].Color_x := -0.23
-            voicemeeter.strip[1].Color_y := +0.37
-
-            voicemeeter.strip[6].gain := -20
-            voicemeeter.strip[7].gain := -20
-            voicemeeter.strip[8].gain := -20
-            voicemeeter.command.restart()
-        Return
-
-        ;Modes
-        case "TV":
-            Voicemeeter_setMainOutput("A4")
-            voicemeeter.strip[6].gain := 0
-            voicemeeter.strip[7].gain := 0
-            voicemeeter.strip[8].mute := -1
-            voicemeeter.command.restart()
-        Return
-        case "VR":
-            Voicemeeter_setMainOutput("A3")
-            voicemeeter.strip[1].device["mme"]:= "VR (Rift S)"
-            voicemeeter.strip[6].gain := -20
-            voicemeeter.strip[7].gain := -20
-            voicemeeter.strip[8].gain := -25
-        Return
-        case "Speakers":
-            If (voicemeeter.strip[6].A2) {
-                Voicemeeter_setMainOutput("A1")
-                voicemeeter.strip[1].mute := 0
-            }
-            Else {
-                Voicemeeter_setMainOutput("A2")
-                voicemeeter.strip[1].mute := -1
-            }
-        Return
-        case "Bluetooth":
-            If (voicemeeter.strip[6].A5) {
-                Voicemeeter_setMainOutput("A1")
-            }
-            Else {
-                Voicemeeter_setMainOutput("A5")
-                voicemeeter.command.restart()
-            }
-        Return
-
-        ;Main
-        case "MainVolUp": voicemeeter.strip[6].gain += 0.5
-        case "MainVolDown": voicemeeter.strip[6].gain -= 0.5
-        case "MainMute": voicemeeter.strip[6].mute--
-
-        ;Media
-        case "MediaVolUp": voicemeeter.strip[7].gain += 0.5
-        case "MediaVolDown": voicemeeter.strip[7].gain -= 0.5
-        case "MediaMute": voicemeeter.strip[7].mute--
-
-        ;VOIP
-        case "VOIPVolUp": voicemeeter.strip[8].gain += 0.5
-        case "VOIPVolDown": voicemeeter.strip[8].gain -= 0.5
-        case "VOIPMute": voicemeeter.strip[8].mute--
-    }
-}
-
-MonitorSwitcher(mode) {
-    cmd = "MonitorSwitcher.exe -load:%mode%.xml"
-    CMD(cmd, "\MonitorProfileSwitcher", True)
-    Sleep 5000
-}
-
-setHotkeyState(sw) {
-    If (sw) {
+setHotkeyState(switch) {
+    If (switch) {
         Hotkey, WheelUp, On
         Hotkey, WheelDown, On
         Hotkey, LButton, On
@@ -185,24 +64,35 @@ setHotkeyState(sw) {
     }
 }
 
+switchMonitor(mode) {
+    cmd = "MonitorSwitcher.exe -load:%mode%.xml"
+    CMD(cmd, "\MonitorProfileSwitcher", True)
+    Sleep 5000
+}
+
 setMode(mode) {
     If (mode == "PC") {
-        MonitorSwitcher("PC")
-        Voicemeeter("RESET")
+        switchMonitor("PC")
+        voicemeeter.cmd("RESET")
     }
     Else If (mode == "TV") {
         MsgBox, 64, Switching Monitor Mode, Switching to TV-Mode, 2
-        MonitorSwitcher("TV")
-        Voicemeeter("TV")
-        CMD("easyrp.exe", "\EasyRP", True)
-        Run, "steam://open/bigpicture"
-        Process, Wait, steam.exe
+        switchMonitor("TV")
+        voicemeeter.cmd("TV")
         MouseMove, 0, 2160
-        Process, WaitClose, steam.exe
+        CMD("easyrp.exe", "\EasyRP", True)
+        RunWait, "C:\Program Files (x86)\Steam\steam.exe" -bigpicture
         Process, Close, easyrp.exe
         setMode("PC")
     }
+    Else If (mode == "VR") {
+        voicemeeter.cmd("VR")
+        RunWait, OculusVolumeControl.ahk
+        voicemeeter.cmd("RESET")
+        Process, Close, Steam.exe
+    }
 }
+
 
 ;KB-HOTKEYS
 ^!F4::
@@ -210,7 +100,14 @@ setMode(mode) {
     run, taskkill /PID %active_id% /F,,Hide
 return
 
-^+R:: voicemeeter.command.restart()
+^+R:: 
+    KeyWait, %A_ThisHotkey%
+    KeyWait, %A_ThisHotkey%, d t0.250 ;Wait for double click
+    If (Errorlevel)
+        voicemeeter.command.restart()
+    Else
+        voicemeeter.cmd("RESET")
+Return
 
 ;Mouse-HOTKEYS
 XButton1::
@@ -239,21 +136,21 @@ Return
 
 WheelUp::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
-        Voicemeeter("VOIPVolUp")
+        voicemeeter.cmd("VOIPVolUp")
     Else If (GetKeyState("XButton1","P")) ;Main
-        Voicemeeter("MainVolUp")
+        voicemeeter.cmd("MainVolUp")
     Else If (GetKeyState("XButton2","P")) ;Media
-        Voicemeeter("MediaVolUp")
+        voicemeeter.cmd("MediaVolUp")
     state := True
 Return
 
 WheelDown::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
-        Voicemeeter("VOIPVolDown")
+        voicemeeter.cmd("VOIPVolDown")
     Else If (GetKeyState("XButton1","P")) ;Main
-        Voicemeeter("MainVolDown")
+        voicemeeter.cmd("MainVolDown")
     Else If (GetKeyState("XButton2","P")) ;Media
-        Voicemeeter("MediaVolDown")
+        voicemeeter.cmd("MediaVolDown")
     state := True
 Return
 
@@ -279,8 +176,8 @@ Return
 
 MButton::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) { ;VOIP
-        Sleep, 2000
-        SendMessage,0x112,0xF170,2,,Program Manager
+        Sleep, 1000
+        SendMessage, 0x112, 0xF170, 2, , Program Manager ;Turn off monitors
     }
     Else If (GetKeyState("XButton1","P")) ;Main
         notImpl() ;#TODO: Implement an action
@@ -291,21 +188,22 @@ Return
 
 F24::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
-        Voicemeeter("VOIPMute")
+        voicemeeter.cmd("VOIPMute")
     Else If (GetKeyState("XButton1","P")) ;Main
-        Voicemeeter("MainMute")
+        voicemeeter.cmd("MainMute")
     Else If (GetKeyState("XButton2","P")) ;Media
-        Voicemeeter("MediaMute")
+        voicemeeter.cmd("MediaMute")
     Else {
         KeyWait, %A_ThisHotkey%
         KeyWait, %A_ThisHotkey%, d t0.250 ;Wait for double click
         If (Errorlevel)
-            Voicemeeter("Speakers")
+            voicemeeter.cmd("Speakers")
         Else
-            Voicemeeter("Bluetooth")
+            voicemeeter.cmd("Bluetooth")
     }
     state := True
 Return
+
 
 ;Controller-HOTKEYS
 ~$vk07::
@@ -319,3 +217,101 @@ Return
             setMode("TV")
     }
 Return
+
+
+;Classes
+Class Voicemeeter {
+    vm := ""
+    
+    __New() {
+        this.vm := new VMR()
+        this.vm.login()
+    }
+
+    cmd(macrolabel) {
+        switch macrolabel {
+            case "RESET":
+                this.setMainOutput("A1", True)
+                this.vm.strip[1].device["mme"]:= "Quadcast (HyperX Quadcast)"
+                this.vm.strip[1].Color_x := -0.23
+                this.vm.strip[1].Color_y := +0.37
+
+                this.vm.strip[6].gain := -20
+                this.vm.strip[7].gain := -20
+                this.vm.strip[8].gain := -20
+                this.vm.command.restart()
+            Return
+
+            ;Modes
+            case "TV":
+                this.setMainOutput("A4")
+                this.vm.strip[6].gain := 0
+                this.vm.strip[7].gain := 0
+                this.vm.strip[8].mute := -1
+                this.vm.command.restart()
+            Return
+            case "VR":
+                this.setMainOutput("A3")
+                this.vm.strip[1].device["mme"]:= "VR (Rift S)"
+                this.vm.strip[6].gain := -20
+                this.vm.strip[7].gain := -20
+                this.vm.strip[8].gain := -25
+            Return
+            case "Speakers":
+                If (this.vm.strip[6].A2) {
+                    this.setMainOutput("A1")
+                    this.vm.strip[1].mute := 0
+                }
+                Else {
+                    this.setMainOutput("A2")
+                    this.vm.strip[1].mute := -1
+                }
+            Return
+            case "Bluetooth":
+                If (this.vm.strip[6].A5) {
+                    this.setMainOutput("A1")
+                }
+                Else {
+                    this.setMainOutput("A5")
+                    this.vm.command.restart()
+                }
+            Return
+
+            ;Main
+            case "MainVolUp": this.vm.strip[6].gain += 0.5
+            case "MainVolDown": this.vm.strip[6].gain -= 0.5
+            case "MainMute": this.vm.strip[6].mute--
+
+            ;Media
+            case "MediaVolUp": this.vm.strip[7].gain += 0.5
+            case "MediaVolDown": this.vm.strip[7].gain -= 0.5
+            case "MediaMute": this.vm.strip[7].mute--
+
+            ;VOIP
+            case "VOIPVolUp": this.vm.strip[8].gain += 0.5
+            case "VOIPVolDown": this.vm.strip[8].gain -= 0.5
+            case "VOIPMute": this.vm.strip[8].mute--
+        }
+    }
+    
+    setMainOutput(output, unmute := False) {
+        for i, strip in this.vm.strip {
+            If (i > 5) {
+                strip.A1 := 0
+                strip.A2 := 0
+                strip.A3 := 0
+                strip.A4 := 0
+                strip.A5 := 0
+                switch output {
+                    case "A1": strip.A1 := -1
+                    case "A2": strip.A2 := -1
+                    case "A3": strip.A3 := -1
+                    case "A4": strip.A4 := -1
+                    case "A5": strip.A5 := -1
+                }
+            }
+            If (unmute)
+                strip.mute := 0
+        }
+    }
+}
