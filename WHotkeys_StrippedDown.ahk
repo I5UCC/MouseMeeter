@@ -54,10 +54,6 @@ Voicemeeter(macrolabel) {
     switch macrolabel {
         case "RESET":
             Voicemeeter_setMainOutput("A1", True)
-            voicemeeter.strip[1].device["mme"]:= "Quadcast (HyperX Quadcast)"
-            voicemeeter.strip[1].Color_x := -0.23
-            voicemeeter.strip[1].Color_y := +0.37
-
             voicemeeter.strip[6].gain := -20
             voicemeeter.strip[7].gain := -20
             voicemeeter.strip[8].gain := -20
@@ -74,7 +70,6 @@ Voicemeeter(macrolabel) {
         Return
         case "VR":
             Voicemeeter_setMainOutput("A3")
-            voicemeeter.strip[1].device["mme"]:= "VR (Rift S)"
             voicemeeter.strip[6].gain := -20
             voicemeeter.strip[7].gain := -20
             voicemeeter.strip[8].gain := -25
