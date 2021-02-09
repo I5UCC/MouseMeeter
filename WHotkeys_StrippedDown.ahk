@@ -1,16 +1,22 @@
 ﻿#SingleInstance ignore
 #Persistent
-#NoTrayIcon
+;#NoTrayIcon
 #NoEnv
 SetWorkingDir %A_ScriptDir%
 SendMode Input
 #Include VMR.ahk/VMR.ahk
+#include auto_oculus_touch.ahk
 
-setHotkeyState(False)
 global voicemeeter
-voicemeeter := new VMR()
-voicemeeter.login()
-Voicemeeter("RESET")
+global state
+Init()
+
+Init() {
+    setHotkeyState(False)
+    voicemeeter := new VMR()
+    voicemeeter.login()
+    Voicemeeter("RESET")
+}
 
 ;Methods
 notImpl() {
@@ -38,32 +44,58 @@ Voicemeeter_setMainOutput(output, unmute := False) {
                 case "A4": strip.A4 := -1
                 case "A5": strip.A5 := -1
             }
-            If (unmute)
-                strip.mute := 0
         }
+        If (unmute)
+                strip.mute := 0
     }
 }
 
 Voicemeeter(macrolabel) {
     switch macrolabel {
         case "RESET":
-            Voicemeeter_setMainOutput("A1",True)
+            Voicemeeter_setMainOutput("A1", True)
+            voicemeeter.strip[1].device["mme"]:= "Quadcast (HyperX Quadcast)"
             voicemeeter.strip[1].Color_x := -0.23
-            voicemeeter.strip[1].Color_y = +0.37
+            voicemeeter.strip[1].Color_y := +0.37
 
             voicemeeter.strip[6].gain := -20
             voicemeeter.strip[7].gain := -20
-            voicemeeter.strip[8].gain := -10
+            voicemeeter.strip[8].gain := -20
             voicemeeter.command.restart()
         Return
 
         ;Modes
+        case "TV":
+            Voicemeeter_setMainOutput("A4")
+            voicemeeter.strip[6].gain := 0
+            voicemeeter.strip[7].gain := 0
+            voicemeeter.strip[8].mute := -1
+            voicemeeter.command.restart()
+        Return
+        case "VR":
+            Voicemeeter_setMainOutput("A3")
+            voicemeeter.strip[1].device["mme"]:= "VR (Rift S)"
+            voicemeeter.strip[6].gain := -20
+            voicemeeter.strip[7].gain := -20
+            voicemeeter.strip[8].gain := -25
+        Return
         case "Speakers":
             If (voicemeeter.strip[6].A2) {
                 Voicemeeter_setMainOutput("A1")
+                voicemeeter.strip[1].mute := 0
             }
             Else {
                 Voicemeeter_setMainOutput("A2")
+                voicemeeter.strip[1].mute := -1
+            }
+        Return
+        case "Bluetooth":
+            If (voicemeeter.strip[6].A5) {
+                Voicemeeter_setMainOutput("A1")
+            }
+            Else {
+                Voicemeeter_setMainOutput("A5")
+                voicemeeter.command.restart()
             }
         Return
 
@@ -175,8 +207,10 @@ RButton::
 Return
 
 MButton::
-    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
-        notImpl() ;#TODO: Implement an action
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) { ;VOIP
+        Sleep, 2000
+        SendMessage,0x112,0xF170,2,,Program Manager
+    }
     Else If (GetKeyState("XButton1","P")) ;Main
         notImpl() ;#TODO: Implement an action
     Else If (GetKeyState("XButton2","P")) ;Media
