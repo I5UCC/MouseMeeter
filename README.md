@@ -5,8 +5,6 @@ These sidebuttons are normally used to go "Forward" or "Backward" on a page, the
 
 ## Macros:
 
-![Example picture](https://i.imgur.com/xqwWpx9.png)
-
 | Macro | Action |
 | --- | --- |
 | Backward+WheelUp   | VAIO Volume increase by 0.5 |
@@ -28,6 +26,9 @@ These sidebuttons are normally used to go "Forward" or "Backward" on a page, the
 | Ctrl+Alt+F4 | Force close Active window (Something like [SuperF4](https://stefansundin.github.io/superf4/)) |
 
 Releasing Backward/Forward without triggering any of the above macros will just send Backward/Forward again
+
+### Example
+![Example picture](https://i.imgur.com/xqwWpx9.png)
 
 # Modifying the script
 
