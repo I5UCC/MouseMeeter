@@ -1,7 +1,7 @@
 # WHotkeys
-An Autohotkey script to bind mouse keys to do Voicemeeter commands.
+A relatively simple Autohotkey script binding mouse keys to do Voicemeeter commands.
 This script primarily uses the mouse side buttons to control Voicemeeter (And also some other things). 
-These sidebuttons are normally used to go "Forward" or "Backward" on a page, these actions still work.
+These sidebuttons are normally used to go "Forward" or "Backward" on a page, these actions still work (Seen on the example picture).
 
 ## Macros:
 
