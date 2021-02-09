@@ -10,41 +10,16 @@ global voicemeeter
 global state
 
 Init()
-Loop {
-    Process, Wait, OculusClient.exe
-    setMode("VR")
-}
 
 Init() {
     setHotkeyState(False)
-
     voicemeeter := new Voicemeeter()
     voicemeeter.cmd("RESET")
-
-    CMD("w32tm.exe /resync", "C:\Windows\System32", True)
-    CMD("powercfg.exe /SETACTIVE 381b4222-f694-41f0-9685-ff5bb260df2e", "C:\Windows\System32", True)
-    Process, Priority, ,High
-    Process, Wait, Light Host.exe
-    Process, Priority, Light Host.exe, H
-    Process, Wait, voicemeeter8.exe
-    Process, Priority, voicemeeter8.exe, H
-
-    SysGet, mc, MonitorCount
-    If (GetKeyState("JoyInfo"))
-        setMode("TV")
-    Else If (mc != 3)
-        setMode("PC")
 }
 
 ;Methods
 notImpl() {
     ;MsgBox, 64, NOT IMPLEMENTED, NOT IMPLEMENTED, 5
-}
-
-CMD(cmd, Directory, bhide:=False) {
-    If Directory not contains :
-        Directory = %A_ScriptDir%%Directory%
-    Run, %ComSpec% /c %cmd%, %Directory%, (bhide ? Hide : Show)
 }
 
 setHotkeyState(switch) {
@@ -61,35 +36,6 @@ setHotkeyState(switch) {
         Hotkey, LButton, Off
         Hotkey, RButton, Off
         Hotkey, MButton, Off
-    }
-}
-
-switchMonitor(mode) {
-    cmd = "MonitorSwitcher.exe -load:%mode%.xml"
-    CMD(cmd, "\MonitorProfileSwitcher", True)
-    Sleep 5000
-}
-
-setMode(mode) {
-    If (mode == "PC") {
-        switchMonitor("PC")
-        voicemeeter.cmd("RESET")
-    }
-    Else If (mode == "TV") {
-        MsgBox, 64, Switching Monitor Mode, Switching to TV-Mode, 2
-        switchMonitor("TV")
-        voicemeeter.cmd("TV")
-        MouseMove, 0, 2160
-        CMD("easyrp.exe", "\EasyRP", True)
-        RunWait, "C:\Program Files (x86)\Steam\steam.exe" -bigpicture
-        Process, Close, easyrp.exe
-        setMode("PC")
-    }
-    Else If (mode == "VR") {
-        voicemeeter.cmd("VR")
-        RunWait, %A_WorkingDir%/VOTVolumeControl/VOTVolumeControl.ahk
-        voicemeeter.cmd("RESET")
-        Process, Close, Steam.exe
     }
 }
 
@@ -232,10 +178,6 @@ Class Voicemeeter {
         switch macrolabel {
             case "RESET":
                 this.setMainOutput("A1", True)
-                this.vm.strip[1].device["mme"]:= "Quadcast (HyperX Quadcast)"
-                this.vm.strip[1].Color_x := -0.23
-                this.vm.strip[1].Color_y := +0.37
-
                 this.vm.strip[6].gain := -20
                 this.vm.strip[7].gain := -20
                 this.vm.strip[8].gain := -20
@@ -252,7 +194,6 @@ Class Voicemeeter {
             Return
             case "VR":
                 this.setMainOutput("A3")
-                this.vm.strip[1].device["mme"]:= "VR (Rift S)"
                 this.vm.strip[6].gain := -20
                 this.vm.strip[7].gain := -20
                 this.vm.strip[8].gain := -25
