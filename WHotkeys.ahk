@@ -168,19 +168,6 @@ Class Voicemeeter {
             Return
 
             ;Modes
-            case "TV":
-                this.setMainOutput("A4")
-                this.vm.strip[6].gain := 0
-                this.vm.strip[7].gain := 0
-                this.vm.strip[8].mute := -1
-                this.vm.command.restart()
-            Return
-            case "VR":
-                this.setMainOutput("A3")
-                this.vm.strip[6].gain := -20
-                this.vm.strip[7].gain := -20
-                this.vm.strip[8].gain := -25
-            Return
             case "Speakers":
                 If (this.vm.strip[6].A2) {
                     this.setMainOutput("A1")
@@ -196,7 +183,7 @@ Class Voicemeeter {
                     this.setMainOutput("A1")
                 }
                 Else {
-                    this.setMainOutput("A5")
+                    this.setMainOutput("A3")
                     this.vm.command.restart()
                 }
             Return
