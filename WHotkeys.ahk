@@ -137,8 +137,8 @@ F24::
     Else If (GetKeyState("XButton2","P")) ;Media
         voicemeeter.cmd("MediaMute")
     Else {
-        KeyWait, %A_ThisHotkey%
-        KeyWait, %A_ThisHotkey%, d t0.250 ;Wait for double click
+        KeyWait, R
+        KeyWait, R, d t0.250 ;Wait for double click
         If (Errorlevel)
             voicemeeter.cmd("Speakers")
         Else
