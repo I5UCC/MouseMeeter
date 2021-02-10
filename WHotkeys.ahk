@@ -9,13 +9,10 @@ SendMode Input
 global voicemeeter
 global state
 
-Init()
+setHotkeyState(False)
+voicemeeter := new Voicemeeter()
+voicemeeter.cmd("RESET")
 
-Init() {
-    setHotkeyState(False)
-    voicemeeter := new Voicemeeter()
-    voicemeeter.cmd("RESET")
-}
 
 ;Methods
 notImpl() {
@@ -148,20 +145,6 @@ F24::
             voicemeeter.cmd("Bluetooth")
     }
     state := True
-Return
-
-
-;Controller-HOTKEYS
-~$vk07::
-    SysGet, mc, MonitorCount
-    If (mc > 1) {
-        Loop {
-            Sleep, 300
-        } Until (GetKeyState("vk07") == "0")
-        Sleep, 1000
-        If (GetKeyState("JoyInfo"))
-            setMode("TV")
-    }
 Return
 
 

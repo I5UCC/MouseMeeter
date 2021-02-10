@@ -9,18 +9,18 @@ SendMode Input
 global voicemeeter
 global state
 
-Init()
+setHotkeyState(False)
+voicemeeter := new Voicemeeter()
+voicemeeter.cmd("RESET")
+
+StartupProcedure()
 Loop {
     Process, Wait, OculusClient.exe
     setMode("VR")
 }
 
-Init() {
-    setHotkeyState(False)
 
-    voicemeeter := new Voicemeeter()
-    voicemeeter.cmd("RESET")
-
+StartupProcedure() {
     CMD("w32tm.exe /resync", "C:\Windows\System32", True)
     CMD("powercfg.exe /SETACTIVE 381b4222-f694-41f0-9685-ff5bb260df2e", "C:\Windows\System32", True)
     Process, Priority, ,High
