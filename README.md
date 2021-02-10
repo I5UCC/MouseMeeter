@@ -17,7 +17,7 @@ These sidebuttons are normally used to go "Forward" or "Backward" on a page, the
 | Forward+RButton | Media_Next |
 | Forward+MButton | Media_Play_Pause |
 | F24 (bound to mouse) | switch to output A2 |
-| double F24 | switch to output A5 |
+| double F24 | switch to output A3 |
 | Forward+F24 | AUX Mute |
 | Backward+F24 | VAIO Mute |
 | Backward+Forward+F24 | VAIO3 Mute |
