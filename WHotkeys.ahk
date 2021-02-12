@@ -47,7 +47,7 @@ return
     KeyWait, %A_ThisHotkey%
     KeyWait, %A_ThisHotkey%, d t0.250 ;Wait for double click
     If (Errorlevel)
-        voicemeeter.command.restart()
+        voicemeeter.vm.command.restart()
     Else
         voicemeeter.cmd("RESET")
 Return

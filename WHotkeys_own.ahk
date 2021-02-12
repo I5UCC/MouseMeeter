@@ -13,28 +13,14 @@ setHotkeyState(False)
 voicemeeter := new Voicemeeter()
 voicemeeter.cmd("RESET")
 
-StartupProcedure()
+CMD("w32tm.exe /resync", "C:\Windows\System32", True)
+CMD("powercfg.exe /SETACTIVE 381b4222-f694-41f0-9685-ff5bb260df2e", "C:\Windows\System32", True)
+
 Loop {
     Process, Wait, OculusClient.exe
     setMode("VR")
 }
 
-
-StartupProcedure() {
-    CMD("w32tm.exe /resync", "C:\Windows\System32", True)
-    CMD("powercfg.exe /SETACTIVE 381b4222-f694-41f0-9685-ff5bb260df2e", "C:\Windows\System32", True)
-    Process, Priority, ,High
-    Process, Wait, Light Host.exe
-    Process, Priority, Light Host.exe, H
-    Process, Wait, voicemeeter8.exe
-    Process, Priority, voicemeeter8.exe, H
-
-    SysGet, mc, MonitorCount
-    If (GetKeyState("JoyInfo"))
-        setMode("TV")
-    Else If (mc != 3)
-        setMode("PC")
-}
 
 ;Methods
 notImpl() {
@@ -81,7 +67,9 @@ setMode(mode) {
         voicemeeter.cmd("TV")
         MouseMove, 0, 2160
         CMD("easyrp.exe", "\EasyRP", True)
-        RunWait, "C:\Program Files (x86)\Steam\steam.exe" -bigpicture
+        Run, "steam://open/bigpicture"
+        Process, Wait, steam.exe
+        Process, WaitClose, steam.exe
         Process, Close, easyrp.exe
         setMode("PC")
     }
@@ -104,7 +92,7 @@ return
     KeyWait, R
     KeyWait, R, d t0.250 ;Wait for double click
     If (Errorlevel)
-        voicemeeter.command.restart()
+        voicemeeter.vm.command.restart()
     Else
         voicemeeter.cmd("RESET")
 Return
@@ -209,11 +197,8 @@ Return
 ~$vk07::
     SysGet, mc, MonitorCount
     If (mc > 1) {
-        Loop {
-            Sleep, 300
-        } Until (GetKeyState("vk07") == "0")
-        Sleep, 1000
-        If (GetKeyState("JoyInfo"))
+        MsgBox, 4,, Switch to TV-Mode?, 5
+        IfMsgBox Yes
             setMode("TV")
     }
 Return
