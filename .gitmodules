@@ -10,3 +10,7 @@
 	path = VOTVolumeControl
 	url = https://github.com/I5UCC/VOTVolumeControl
 	branch = master
+[submodule "lighthouse-v2-manager"]
+	path = lighthouse-v2-manager
+	url = https://github.com/nouser2013/lighthouse-v2-manager
+	branch = master
