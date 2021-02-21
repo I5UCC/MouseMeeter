@@ -27,10 +27,14 @@ notImpl() {
     ;MsgBox, 64, NOT IMPLEMENTED, NOT IMPLEMENTED, 5
 }
 
-CMD(cmd, Directory, bhide:=False) {
+CMD(cmd, Directory, bhide := False) {
     If Directory not contains :
         Directory = %A_ScriptDir%%Directory%
-    Run, %ComSpec% /c %cmd%, %Directory%, (bhide ? Hide : Show)
+    
+    If (bhide)
+        RunWait, %ComSpec% /c %cmd%, %Directory%, Hide
+    Else
+        RunWait, %ComSpec% /c %cmd%, %Directory%, Show
 }
 
 setHotkeyState(switch) {
@@ -75,9 +79,16 @@ setMode(mode) {
     }
     Else If (mode == "VR") {
         voicemeeter.cmd("VR")
-        RunWait, %A_WorkingDir%/VOTVolumeControl/VOTVolumeControl_own.ahk, %A_WorkingDir%/VOTVolumeControl
+        Loop {
+            CMD("python ./lighthouse-v2-manager.py on EB:61:A4:E7:CF:FD C2:38:4C:C7:85:A4", "\lighthouse-v2-manager")
+        } Until (Errorlevel != 15)
+        
+        RunWait, %A_WorkingDir%/VOTVolumeControl/VOTVolumeControl.ahk, %A_WorkingDir%/VOTVolumeControl
+
         voicemeeter.cmd("RESET")
-        Process, Close, Steam.exe
+        Loop {
+            CMD("python ./lighthouse-v2-manager.py off EB:61:A4:E7:CF:FD C2:38:4C:C7:85:A4", "\lighthouse-v2-manager")
+        } Until (Errorlevel != 15)
     }
 }
 
