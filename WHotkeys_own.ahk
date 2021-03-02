@@ -27,14 +27,19 @@ notImpl() {
     ;MsgBox, 64, NOT IMPLEMENTED, NOT IMPLEMENTED, 5
 }
 
-CMD(cmd, Directory, bhide := False) {
-    If Directory not contains :
-        Directory = %A_ScriptDir%%Directory%
+CMD(cmd, dir, bhide := False, wait := False) {
+    If dir not contains :
+        dir = %A_ScriptDir%%dir%
     
-    If (bhide)
-        RunWait, %ComSpec% /c %cmd%, %Directory%, Hide
-    Else
-        RunWait, %ComSpec% /c %cmd%, %Directory%, Show
+    If (!wait && !bhide)
+        Run, %ComSpec% /c %cmd%, %dir%, Show
+    Else If (wait && !bhide)
+        RunWait, %ComSpec% /c %cmd%, %dir%, Show
+    Else If (!wait && bhide)
+        Run, %ComSpec% /c %cmd%, %dir%, Hide
+    Else If (wait && bhide)
+        RunWait, %ComSpec% /c %cmd%, %dir%, Hide
+    
 }
 
 setHotkeyState(switch) {
@@ -54,44 +59,47 @@ setHotkeyState(switch) {
     }
 }
 
-switchMonitor(mode) {
-    cmd = "MonitorSwitcher.exe -load:%mode%.xml"
-    CMD(cmd, "\MonitorProfileSwitcher", True)
+setLighthouseState(state, mac) {
+    switch := state ? " on " : " off "
+    command := "python ./lighthouse-v2-manager.py"
+    command = %command%%switch%%mac%
+    i := 0
+    Loop {
+        CMD(command, "\lighthouse-v2-manager", True, True)
+        If (Errorlevel != 15)
+            i++
+    } Until (i > 2)
+}
+
+setMonitorProfile(profile) {
+    cmd = "MonitorSwitcher.exe -load:%profile%.xml"
+    CMD(cmd, "\MonitorProfileSwitcher", True, True)
     Sleep 5000
 }
 
 setMode(mode) {
-    If (mode == "PC") {
-        switchMonitor("PC")
-        voicemeeter.cmd("RESET")
-    }
-    Else If (mode == "TV") {
-        MsgBox, 64, Switching Monitor Mode, Switching to TV-Mode, 2
-        switchMonitor("TV")
-        voicemeeter.cmd("TV")
+    setMonitorProfile(mode)
+    voicemeeter.cmd(mode)
+    
+    If (mode == "TV") {
         MouseMove, 0, 2160
         CMD("easyrp.exe", "\EasyRP", True)
         Run, "steam://open/bigpicture"
+        Sleep, 10000
         Process, Wait, steam.exe
         Process, WaitClose, steam.exe
         Process, Close, easyrp.exe
         setMode("PC")
     }
     Else If (mode == "VR") {
-        voicemeeter.cmd("VR")
-        Loop {
-            CMD("python ./lighthouse-v2-manager.py on EB:61:A4:E7:CF:FD C2:38:4C:C7:85:A4", "\lighthouse-v2-manager")
-        } Until (Errorlevel != 15)
-        
-        RunWait, %A_WorkingDir%/VOTVolumeControl/VOTVolumeControl.ahk, %A_WorkingDir%/VOTVolumeControl
-
-        voicemeeter.cmd("RESET")
-        Loop {
-            CMD("python ./lighthouse-v2-manager.py off EB:61:A4:E7:CF:FD C2:38:4C:C7:85:A4", "\lighthouse-v2-manager")
-        } Until (Errorlevel != 15)
+        Run, "steam://rungameid/250820"
+        setLighthouseState(True, "C2:38:4C:C7:85:A4 EB:61:A4:E7:CF:FD")
+        RunWait, %A_WorkingDir%/VOTVolumeControl/VOTVolumeControl_SteamVR.ahk, %A_WorkingDir%/VOTVolumeControl
+        setMode("PC")
+        WinClose, Oculus
+        setLighthouseState(False, "C2:38:4C:C7:85:A4 EB:61:A4:E7:CF:FD")
     }
 }
-
 
 ;KB-HOTKEYS
 ^!F4::
@@ -208,8 +216,10 @@ Return
 ~$vk07::
     SysGet, mc, MonitorCount
     If (mc > 1) {
-        MsgBox, 4,, Switch to TV-Mode?, 5
-        IfMsgBox Yes
+        MsgBox, 1,, Switching to TV-Mode..., 5
+        IfMsgBox, Timeout
+            setMode("TV")
+        else IfMsgBox, OK
             setMode("TV")
     }
 Return
@@ -247,7 +257,7 @@ Class Voicemeeter {
                 this.vm.command.restart()
             Return
             case "VR":
-                this.setMainOutput("A4")
+                this.setMainOutput("A4", True)
                 this.vm.strip[1].device["mme"]:= "VR (Rift S)"
                 this.vm.strip[6].gain := -20
                 this.vm.strip[7].gain := -20
@@ -255,20 +265,18 @@ Class Voicemeeter {
             Return
             case "Speakers":
                 If (this.vm.strip[6].A2) {
-                    this.setMainOutput("A1")
-                    this.vm.strip[1].mute := 0
+                    this.setMainOutput("A1", True)
                 }
                 Else {
-                    this.setMainOutput("A2")
-                    this.vm.strip[1].mute := -1
+                    this.setMainOutput("A2", True)
                 }
             Return
             case "Bluetooth":
                 If (this.vm.strip[6].A5) {
-                    this.setMainOutput("A1")
+                    this.setMainOutput("A1", True)
                 }
                 Else {
-                    this.setMainOutput("A3")
+                    this.setMainOutput("A3", True)
                     this.vm.command.restart()
                 }
                 this.vm.strip[1].mute := 0
