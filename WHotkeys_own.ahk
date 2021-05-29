@@ -18,13 +18,24 @@ CMD("powercfg.exe /SETACTIVE 381b4222-f694-41f0-9685-ff5bb260df2e", "C:\Windows\
 
 Loop {
     Process, Wait, OculusClient.exe
-    setMode("VR")
+
+    If (MessageBox("Switching to VR-Mode...", 5))
+        setMode("VR")
+    Else
+        Process, WaitClose, OculusClient.exe
 }
 
 
 ;Methods
 notImpl() {
     ;MsgBox, 64, NOT IMPLEMENTED, NOT IMPLEMENTED, 5
+}
+
+MessageBox(Message, Timeout) {
+    MsgBox, 4097,, %Message%, %Timeout%
+    IfMsgBox, Cancel
+        Return False
+    Return True
 }
 
 CMD(cmd, dir, bhide := False, wait := False) {
@@ -78,10 +89,24 @@ setMonitorProfile(profile) {
 }
 
 setMode(mode) {
-    setMonitorProfile(mode)
-    voicemeeter.cmd(mode)
-    
-    If (mode == "TV") {
+    If (mode == "RESET") {
+        setMonitorProfile("RESET")
+        voicemeeter.cmd("RESET")
+    }
+    Else If (mode == "VR") {
+        Run, "steam://rungameid/250820"
+        setMonitorProfile("VR")
+        voicemeeter.cmd("VR")
+        setLighthouseState(True, "C2:38:4C:C7:85:A4 EB:61:A4:E7:CF:FD")
+        RunWait, %A_WorkingDir%/VOTVolumeControl/VOTVolumeControl_SteamVR.ahk, %A_WorkingDir%/VOTVolumeControl
+        setMode("RESET")
+        WinClose, Oculus
+        WinWaitClose, Oculus
+        setLighthouseState(False, "C2:38:4C:C7:85:A4 EB:61:A4:E7:CF:FD")
+    }
+    Else If (mode == "TV") {
+        setMonitorProfile("TV")
+        voicemeeter.cmd("TV")
         MouseMove, 0, 2160
         CMD("easyrp.exe", "\EasyRP", True)
         Run, "steam://open/bigpicture"
@@ -89,15 +114,7 @@ setMode(mode) {
         Process, Wait, steam.exe
         Process, WaitClose, steam.exe
         Process, Close, easyrp.exe
-        setMode("PC")
-    }
-    Else If (mode == "VR") {
-        Run, "steam://rungameid/250820"
-        setLighthouseState(True, "C2:38:4C:C7:85:A4 EB:61:A4:E7:CF:FD")
-        RunWait, %A_WorkingDir%/VOTVolumeControl/VOTVolumeControl_SteamVR.ahk, %A_WorkingDir%/VOTVolumeControl
-        setMode("PC")
-        WinClose, Oculus
-        setLighthouseState(False, "C2:38:4C:C7:85:A4 EB:61:A4:E7:CF:FD")
+        setMode("RESET")
     }
 }
 
@@ -125,6 +142,8 @@ XButton1::
 Return
 
 XButton2::
+    If (WinActive("DeadByDaylight")) ;FIXME: thank you DBD
+        Send, {Space}
     state := False
     While GetKeyState("XButton2", "P")
         setHotkeyState(True)
@@ -215,13 +234,9 @@ Return
 ;Controller-HOTKEYS
 ~$vk07::
     SysGet, mc, MonitorCount
-    If (mc > 1) {
-        MsgBox, 1,, Switching to TV-Mode..., 5
-        IfMsgBox, Timeout
+    If (mc > 1)
+        If (MessageBox("Switching to TV-Mode...", 5))
             setMode("TV")
-        else IfMsgBox, OK
-            setMode("TV")
-    }
 Return
 
 
@@ -238,45 +253,59 @@ Class Voicemeeter {
         switch macrolabel {
             case "RESET":
                 this.setMainOutput("A1", True)
-                this.vm.strip[1].device["mme"]:= "Quadcast (HyperX Quadcast)"
+
                 this.vm.strip[1].Color_x := -0.23
                 this.vm.strip[1].Color_y := +0.37
+                this.vm.strip[2].Color_x := -0.23
 
                 this.vm.strip[6].gain := -20
                 this.vm.strip[7].gain := -20
                 this.vm.strip[8].gain := -20
+
+                this.vm.strip[1].mute := 0
+                this.vm.strip[2].mute := 1
                 this.vm.command.restart()
+
             Return
 
             ;Modes
             case "TV":
                 this.setMainOutput("A5")
+
                 this.vm.strip[6].gain := 0
                 this.vm.strip[7].gain := 0
-                this.vm.strip[8].mute := -1
+                this.vm.strip[8].mute := 1
+
                 this.vm.command.restart()
             Return
             case "VR":
                 this.setMainOutput("A4", True)
-                this.vm.strip[1].device["mme"]:= "VR (Rift S)"
+
                 this.vm.strip[6].gain := -20
                 this.vm.strip[7].gain := -20
                 this.vm.strip[8].gain := -25
+
+                this.vm.strip[1].mute := 1
+                this.vm.strip[2].mute := 0
+
+                this.vm.command.restart()
             Return
             case "Speakers":
                 If (this.vm.strip[6].A2) {
-                    this.setMainOutput("A1", True)
+                    this.setMainOutput("A1")
+                    this.vm.strip[1].mute := 0
                 }
                 Else {
-                    this.setMainOutput("A2", True)
+                    this.setMainOutput("A2")
+                    this.vm.strip[1].mute := 1
                 }
             Return
             case "Bluetooth":
                 If (this.vm.strip[6].A5) {
-                    this.setMainOutput("A1", True)
+                    this.setMainOutput("A1")
                 }
                 Else {
-                    this.setMainOutput("A3", True)
+                    this.setMainOutput("A3")
                     this.vm.command.restart()
                 }
                 this.vm.strip[1].mute := 0
@@ -308,11 +337,11 @@ Class Voicemeeter {
                 strip.A4 := 0
                 strip.A5 := 0
                 switch output {
-                    case "A1": strip.A1 := -1
-                    case "A2": strip.A2 := -1
-                    case "A3": strip.A3 := -1
-                    case "A4": strip.A4 := -1
-                    case "A5": strip.A5 := -1
+                    case "A1": strip.A1 := 1
+                    case "A2": strip.A2 := 1
+                    case "A3": strip.A3 := 1
+                    case "A4": strip.A4 := 1
+                    case "A5": strip.A5 := 1
                 }
             }
             If (unmute)
