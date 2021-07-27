@@ -13,10 +13,9 @@ setHotkeyState(False)
 voicemeeter := new Voicemeeter()
 voicemeeter.cmd("RESET")
 
-
 ;Methods
-notImpl() {
-    ;MsgBox, 64, NOT IMPLEMENTED, NOT IMPLEMENTED, 5
+notImplemented() {
+
 }
 
 setHotkeyState(switch) {
@@ -36,7 +35,6 @@ setHotkeyState(switch) {
     }
 }
 
-
 ;KB-HOTKEYS
 ^!F4::
     WinGet, active_id, PID, A
@@ -44,8 +42,8 @@ setHotkeyState(switch) {
 return
 
 ^+R:: 
-    KeyWait, %A_ThisHotkey%
-    KeyWait, %A_ThisHotkey%, d t0.250 ;Wait for double click
+    KeyWait, R
+    KeyWait, R, d t0.250 ;Wait for double click
     If (Errorlevel)
         voicemeeter.vm.command.restart()
     Else
@@ -70,11 +68,13 @@ Return
 XButton1 Up::
     If (!state)
         Send, {XButton1}
+    Sleep, 100
 Return
 
 XButton2 Up::
     If (!state)
         Send, {XButton2}
+    Sleep, 100
 Return
 
 WheelUp::
@@ -99,9 +99,9 @@ Return
 
 LButton::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
-        notImpl() ;#TODO: Implement an action
+        notImplemented()
     Else If (GetKeyState("XButton1","P")) ;Main
-        notImpl() ;#TODO: Implement an action
+        notImplemented()
     Else If (GetKeyState("XButton2","P")) ;Media
         Send, {Media_Prev}
     state := True
@@ -109,21 +109,19 @@ Return
 
 RButton::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
-        notImpl() ;#TODO: Implement an action
+        notImplemented()
     Else If (GetKeyState("XButton1","P")) ;Main
-        notImpl() ;#TODO: Implement an action
+        notImplemented()
     Else If (GetKeyState("XButton2","P")) ;Media
         Send, {Media_Next}
     state := True
 Return
 
 MButton::
-    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) { ;VOIP
-        Sleep, 1000
-        SendMessage, 0x112, 0xF170, 2, , Program Manager ;Turn off monitors
-    }
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
+        notImplemented()
     Else If (GetKeyState("XButton1","P")) ;Main
-        notImpl() ;#TODO: Implement an action
+        notImplemented()
     Else If (GetKeyState("XButton2","P")) ;Media
         Send, {Media_Play_Pause}
     state := True
@@ -137,8 +135,8 @@ F24::
     Else If (GetKeyState("XButton2","P")) ;Media
         voicemeeter.cmd("MediaMute")
     Else {
-        KeyWait, R
-        KeyWait, R, d t0.250 ;Wait for double click
+        KeyWait, %A_ThisHotkey%
+        KeyWait, %A_ThisHotkey%, d t0.250 ;Wait for double click
         If (Errorlevel)
             voicemeeter.cmd("Speakers")
         Else
@@ -146,7 +144,6 @@ F24::
     }
     state := True
 Return
-
 
 ;Classes
 Class Voicemeeter {
@@ -161,10 +158,18 @@ Class Voicemeeter {
         switch macrolabel {
             case "RESET":
                 this.setMainOutput("A1", True)
+
+                this.vm.strip[1].Color_x := -0.26
+                this.vm.strip[2].Color_x := -0.26
+
                 this.vm.strip[6].gain := -20
                 this.vm.strip[7].gain := -20
                 this.vm.strip[8].gain := -20
+
+                this.vm.strip[1].mute := 0
+                this.vm.strip[2].mute := 1
                 this.vm.command.restart()
+
             Return
 
             ;Modes
@@ -175,7 +180,7 @@ Class Voicemeeter {
                 }
                 Else {
                     this.setMainOutput("A2")
-                    this.vm.strip[1].mute := -1
+                    this.vm.strip[1].mute := 1
                 }
             Return
             case "Bluetooth":
@@ -186,6 +191,7 @@ Class Voicemeeter {
                     this.setMainOutput("A3")
                     this.vm.command.restart()
                 }
+                this.vm.strip[1].mute := 0
             Return
 
             ;Main
@@ -214,11 +220,11 @@ Class Voicemeeter {
                 strip.A4 := 0
                 strip.A5 := 0
                 switch output {
-                    case "A1": strip.A1 := -1
-                    case "A2": strip.A2 := -1
-                    case "A3": strip.A3 := -1
-                    case "A4": strip.A4 := -1
-                    case "A5": strip.A5 := -1
+                    case "A1": strip.A1 := 1
+                    case "A2": strip.A2 := 1
+                    case "A3": strip.A3 := 1
+                    case "A4": strip.A4 := 1
+                    case "A5": strip.A5 := 1
                 }
             }
             If (unmute)
