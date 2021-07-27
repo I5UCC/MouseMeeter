@@ -1,6 +1,6 @@
 ﻿#SingleInstance ignore
 #Persistent
-;#NoTrayIcon
+#NoTrayIcon
 #NoEnv
 SetWorkingDir %A_ScriptDir%
 SendMode Input
@@ -68,13 +68,13 @@ Return
 XButton1 Up::
     If (!state)
         Send, {XButton1}
-    Sleep, 100
+    Sleep, 200
 Return
 
 XButton2 Up::
     If (!state)
         Send, {XButton2}
-    Sleep, 100
+    Sleep, 200
 Return
 
 WheelUp::
