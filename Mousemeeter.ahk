@@ -9,6 +9,12 @@ SendMode Input
 global voicemeeter
 global state
 
+global OUTPUT_1 := 6
+global OUTPUT_2 := 7
+global OUTPUT_3 := 8
+global VOLUME_CHANGE_AMOUNT := 0.5
+global DEFAULT_VOLUME := -20
+
 setHotkeyState(False)
 voicemeeter := new Voicemeeter()
 voicemeeter.reset()
@@ -43,7 +49,7 @@ return
 
 ^+R:: 
     KeyWait, R
-    KeyWait, R, d t0.250 ;Wait for double click
+    KeyWait, R, d t0.250
     If (Errorlevel)
         voicemeeter.restart()
     Else
@@ -107,31 +113,31 @@ Return
 
 WheelUp::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VAIO3
-        voicemeeter.volumeUp(8, 0.5)
+        voicemeeter.volumeUp(OUTPUT_3)
     Else If (GetKeyState("XButton1","P")) ;VAIO
-        voicemeeter.volumeUp(6, 0.5)
+        voicemeeter.volumeUp(OUTPUT_2)
     Else If (GetKeyState("XButton2","P")) ;AUX
-        voicemeeter.volumeUp(7, 0.5)
+        voicemeeter.volumeUp(OUTPUT_1)
     state := True
 Return
 
 WheelDown::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VAIO3
-        voicemeeter.volumeDown(8, 0.5)
+        voicemeeter.volumeDown(OUTPUT_3)
     Else If (GetKeyState("XButton1","P")) ;VAIO
-        voicemeeter.volumeDown(6, 0.5)
+        voicemeeter.volumeDown(OUTPUT_2)
     Else If (GetKeyState("XButton2","P")) ;AUX
-        voicemeeter.volumeDown(7, 0.5)
+        voicemeeter.volumeDown(OUTPUT_1)
     state := True
 Return
 
 F24::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VAIO3
-        voicemeeter.volumeMute(8)
+        voicemeeter.volumeMute(OUTPUT_3)
     Else If (GetKeyState("XButton1","P")) ;VAIO
-        voicemeeter.volumeMute(6)
+        voicemeeter.volumeMute(OUTPUT_2)
     Else If (GetKeyState("XButton2","P")) ;AUX
-        voicemeeter.volumeMute(7)
+        voicemeeter.volumeMute(OUTPUT_1)
     Else {
         KeyWait, %A_ThisHotkey%
         KeyWait, %A_ThisHotkey%, d t0.250
@@ -152,12 +158,12 @@ Class Voicemeeter {
         this.vm.login()
     }
 
-    volumeUp(strip, amount) {
-        this.vm.strip[strip].gain += amount
+    volumeUp(strip) {
+        this.vm.strip[strip].gain += VOLUME_CHANGE_AMOUNT
     }
 
-    volumeDown(strip, amount) {
-        this.vm.strip[strip].gain -= amount
+    volumeDown(strip) {
+        this.vm.strip[strip].gain -= VOLUME_CHANGE_AMOUNT
     }
 
     volumeMute(strip) {
@@ -167,16 +173,16 @@ Class Voicemeeter {
     setMainOutput(output, unmute := True) {
         switch output {
             case "A2": 
-                If (this.vm.strip[6].A2)
+                If (this.vm.strip[OUTPUT_1].A2)
                     output := "A1"
             case "A3":
-                If (this.vm.strip[6].A3)
+                If (this.vm.strip[OUTPUT_1].A3)
                     output := "A1"
             case "A4":
-                If (this.vm.strip[6].A4)
+                If (this.vm.strip[OUTPUT_1].A4)
                     output := "A1"
             case "A5":
-                If (this.vm.strip[6].A5)
+                If (this.vm.strip[OUTPUT_1].A5)
                     output := "A1"
         }
         for i, strip in this.vm.strip {
@@ -206,9 +212,9 @@ Class Voicemeeter {
     reset() {
         this.setMainOutput("A1")
 
-        this.vm.strip[6].gain := -20
-        this.vm.strip[7].gain := -20
-        this.vm.strip[8].gain := -20
+        this.vm.strip[6].gain := DEFAULT_VOLUME
+        this.vm.strip[7].gain := DEFAULT_VOLUME
+        this.vm.strip[OUTPUT_3].gain := DEFAULT_VOLUME
 
         for i, strip in this.vm.strip {
             strip.mute := 0
