@@ -11,7 +11,7 @@ global state
 
 setHotkeyState(False)
 voicemeeter := new Voicemeeter()
-voicemeeter.cmd("RESET")
+voicemeeter.reset()
 
 ;Methods
 notImplemented() {
@@ -45,9 +45,9 @@ return
     KeyWait, R
     KeyWait, R, d t0.250 ;Wait for double click
     If (Errorlevel)
-        voicemeeter.vm.command.restart()
+        voicemeeter.restart()
     Else
-        voicemeeter.cmd("RESET")
+        voicemeeter.reset()
 Return
 
 ;Mouse-HOTKEYS
@@ -68,79 +68,77 @@ Return
 XButton1 Up::
     If (!state)
         Send, {XButton1}
-    Sleep, 200
 Return
 
 XButton2 Up::
     If (!state)
         Send, {XButton2}
-    Sleep, 200
-Return
-
-WheelUp::
-    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
-        voicemeeter.cmd("VOIPVolUp")
-    Else If (GetKeyState("XButton1","P")) ;Main
-        voicemeeter.cmd("MainVolUp")
-    Else If (GetKeyState("XButton2","P")) ;Media
-        voicemeeter.cmd("MediaVolUp")
-    state := True
-Return
-
-WheelDown::
-    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
-        voicemeeter.cmd("VOIPVolDown")
-    Else If (GetKeyState("XButton1","P")) ;Main
-        voicemeeter.cmd("MainVolDown")
-    Else If (GetKeyState("XButton2","P")) ;Media
-        voicemeeter.cmd("MediaVolDown")
-    state := True
 Return
 
 LButton::
-    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
         notImplemented()
-    Else If (GetKeyState("XButton1","P")) ;Main
+    Else If (GetKeyState("XButton1","P"))
         notImplemented()
-    Else If (GetKeyState("XButton2","P")) ;Media
+    Else If (GetKeyState("XButton2","P"))
         Send, {Media_Prev}
     state := True
 Return
 
 RButton::
-    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
         notImplemented()
-    Else If (GetKeyState("XButton1","P")) ;Main
+    Else If (GetKeyState("XButton1","P"))
         notImplemented()
-    Else If (GetKeyState("XButton2","P")) ;Media
+    Else If (GetKeyState("XButton2","P"))
         Send, {Media_Next}
     state := True
 Return
 
 MButton::
-    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
         notImplemented()
-    Else If (GetKeyState("XButton1","P")) ;Main
+    Else If (GetKeyState("XButton1","P"))
         notImplemented()
-    Else If (GetKeyState("XButton2","P")) ;Media
+    Else If (GetKeyState("XButton2","P"))
         Send, {Media_Play_Pause}
     state := True
 Return
 
+WheelUp::
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VAIO3
+        voicemeeter.volumeUp(8, 0.5)
+    Else If (GetKeyState("XButton1","P")) ;VAIO
+        voicemeeter.volumeUp(6, 0.5)
+    Else If (GetKeyState("XButton2","P")) ;AUX
+        voicemeeter.volumeUp(7, 0.5)
+    state := True
+Return
+
+WheelDown::
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VAIO3
+        voicemeeter.volumeDown(8, 0.5)
+    Else If (GetKeyState("XButton1","P")) ;VAIO
+        voicemeeter.volumeDown(6, 0.5)
+    Else If (GetKeyState("XButton2","P")) ;AUX
+        voicemeeter.volumeDown(7, 0.5)
+    state := True
+Return
+
 F24::
-    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VOIP
-        voicemeeter.cmd("VOIPMute")
-    Else If (GetKeyState("XButton1","P")) ;Main
-        voicemeeter.cmd("MainMute")
-    Else If (GetKeyState("XButton2","P")) ;Media
-        voicemeeter.cmd("MediaMute")
+    If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VAIO3
+        voicemeeter.volumeMute(8)
+    Else If (GetKeyState("XButton1","P")) ;VAIO
+        voicemeeter.volumeMute(6)
+    Else If (GetKeyState("XButton2","P")) ;AUX
+        voicemeeter.volumeMute(7)
     Else {
         KeyWait, %A_ThisHotkey%
-        KeyWait, %A_ThisHotkey%, d t0.250 ;Wait for double click
+        KeyWait, %A_ThisHotkey%, d t0.250
         If (Errorlevel)
-            voicemeeter.cmd("Speakers")
+            voicemeeter.setMainOutput("A2")
         Else
-            voicemeeter.cmd("Bluetooth")
+            voicemeeter.setMainOutput("A3")
     }
     state := True
 Return
@@ -154,64 +152,33 @@ Class Voicemeeter {
         this.vm.login()
     }
 
-    cmd(macrolabel) {
-        switch macrolabel {
-            case "RESET":
-                this.setMainOutput("A1", True)
+    volumeUp(strip, amount) {
+        this.vm.strip[strip].gain += amount
+    }
 
-                this.vm.strip[1].Color_x := -0.26
-                this.vm.strip[2].Color_x := -0.26
+    volumeDown(strip, amount) {
+        this.vm.strip[strip].gain -= amount
+    }
 
-                this.vm.strip[6].gain := -20
-                this.vm.strip[7].gain := -20
-                this.vm.strip[8].gain := -20
-
-                this.vm.strip[1].mute := 0
-                this.vm.strip[2].mute := 1
-                this.vm.command.restart()
-
-            Return
-
-            ;Modes
-            case "Speakers":
-                If (this.vm.strip[6].A2) {
-                    this.setMainOutput("A1")
-                    this.vm.strip[1].mute := 0
-                }
-                Else {
-                    this.setMainOutput("A2")
-                    this.vm.strip[1].mute := 1
-                }
-            Return
-            case "Bluetooth":
-                If (this.vm.strip[6].A5) {
-                    this.setMainOutput("A1")
-                }
-                Else {
-                    this.setMainOutput("A3")
-                    this.vm.command.restart()
-                }
-                this.vm.strip[1].mute := 0
-            Return
-
-            ;Main
-            case "MainVolUp": this.vm.strip[6].gain += 0.5
-            case "MainVolDown": this.vm.strip[6].gain -= 0.5
-            case "MainMute": this.vm.strip[6].mute--
-
-            ;Media
-            case "MediaVolUp": this.vm.strip[7].gain += 0.5
-            case "MediaVolDown": this.vm.strip[7].gain -= 0.5
-            case "MediaMute": this.vm.strip[7].mute--
-
-            ;VOIP
-            case "VOIPVolUp": this.vm.strip[8].gain += 0.5
-            case "VOIPVolDown": this.vm.strip[8].gain -= 0.5
-            case "VOIPMute": this.vm.strip[8].mute--
-        }
+    volumeMute(strip) {
+        this.vm.strip[strip].mute--
     }
     
-    setMainOutput(output, unmute := False) {
+    setMainOutput(output, unmute := True) {
+        switch output {
+            case "A2": 
+                If (this.vm.strip[6].A2)
+                    output := "A1"
+            case "A3":
+                If (this.vm.strip[6].A3)
+                    output := "A1"
+            case "A4":
+                If (this.vm.strip[6].A4)
+                    output := "A1"
+            case "A5":
+                If (this.vm.strip[6].A5)
+                    output := "A1"
+        }
         for i, strip in this.vm.strip {
             If (i > 5) {
                 strip.A1 := 0
@@ -230,5 +197,23 @@ Class Voicemeeter {
             If (unmute)
                 strip.mute := 0
         }
+    }
+
+    restart() {
+        voicemeeter.vm.command.restart()
+    }
+
+    reset() {
+        this.setMainOutput("A1")
+
+        this.vm.strip[6].gain := -20
+        this.vm.strip[7].gain := -20
+        this.vm.strip[8].gain := -20
+
+        for i, strip in this.vm.strip {
+            strip.mute := 0
+        }
+
+        this.restart()
     }
 }
