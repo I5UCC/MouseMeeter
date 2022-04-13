@@ -42,6 +42,8 @@ setHotkeyState(switch) {
 }
 
 ;KB-HOTKEYS
+#D:: Send !{Space}
+
 ^!F4::
     WinGet, active_id, PID, A
     run, taskkill /PID %active_id% /F,,Hide
@@ -115,9 +117,9 @@ WheelUp::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VAIO3
         voicemeeter.volumeUp(OUTPUT_3)
     Else If (GetKeyState("XButton1","P")) ;VAIO
-        voicemeeter.volumeUp(OUTPUT_2)
-    Else If (GetKeyState("XButton2","P")) ;AUX
         voicemeeter.volumeUp(OUTPUT_1)
+    Else If (GetKeyState("XButton2","P")) ;AUX
+        voicemeeter.volumeUp(OUTPUT_2)
     state := True
 Return
 
@@ -125,9 +127,9 @@ WheelDown::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VAIO3
         voicemeeter.volumeDown(OUTPUT_3)
     Else If (GetKeyState("XButton1","P")) ;VAIO
-        voicemeeter.volumeDown(OUTPUT_2)
-    Else If (GetKeyState("XButton2","P")) ;AUX
         voicemeeter.volumeDown(OUTPUT_1)
+    Else If (GetKeyState("XButton2","P")) ;AUX
+        voicemeeter.volumeDown(OUTPUT_2)
     state := True
 Return
 
@@ -135,9 +137,9 @@ F24::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VAIO3
         voicemeeter.volumeMute(OUTPUT_3)
     Else If (GetKeyState("XButton1","P")) ;VAIO
-        voicemeeter.volumeMute(OUTPUT_2)
-    Else If (GetKeyState("XButton2","P")) ;AUX
         voicemeeter.volumeMute(OUTPUT_1)
+    Else If (GetKeyState("XButton2","P")) ;AUX
+        voicemeeter.volumeMute(OUTPUT_2)
     Else {
         KeyWait, %A_ThisHotkey%
         KeyWait, %A_ThisHotkey%, d t0.250
