@@ -143,8 +143,11 @@ F24::
     Else {
         KeyWait, %A_ThisHotkey%
         KeyWait, %A_ThisHotkey%, d t0.250
-        If (Errorlevel)
+        If (Errorlevel) {
             voicemeeter.setMainOutput("A2")
+            voicemeeter.volumeMute(2, 1)
+            voicemeeter.volumeMute(1)
+        }
         Else
             voicemeeter.setMainOutput("A3")
     }
@@ -168,8 +171,11 @@ Class Voicemeeter {
         this.vm.strip[strip].gain -= VOLUME_CHANGE_AMOUNT
     }
 
-    volumeMute(strip) {
-        this.vm.strip[strip].mute--
+    volumeMute(strip, v = -1) {
+        if (v != -1)
+            this.vm.strip[strip].mute := v
+        Else
+            this.vm.strip[strip].mute--
     }
     
     setMainOutput(output, unmute := True) {
@@ -214,13 +220,15 @@ Class Voicemeeter {
     reset() {
         this.setMainOutput("A1")
 
-        this.vm.strip[6].gain := DEFAULT_VOLUME
-        this.vm.strip[7].gain := DEFAULT_VOLUME
+        this.vm.strip[OUTPUT_1].gain := DEFAULT_VOLUME
+        this.vm.strip[OUTPUT_2].gain := DEFAULT_VOLUME
         this.vm.strip[OUTPUT_3].gain := DEFAULT_VOLUME
 
         for i, strip in this.vm.strip {
             strip.mute := 0
         }
+
+        this.volumeMute(2, 1)
 
         this.restart()
     }
