@@ -61,28 +61,22 @@ Return
 ;Mouse-HOTKEYS
 XButton1::
     state := False
-    While GetKeyState("XButton1", "P") {
-        setHotkeyState(True)
-        Sleep 100
-    }
-    setHotkeyState(False)
+    setHotkeyState(True)
 Return
 
 XButton2::
     state := False
-    While GetKeyState("XButton2", "P") {
-        setHotkeyState(True)
-        Sleep 100
-    }
-    setHotkeyState(False)
+    setHotkeyState(True)
 Return
 
 XButton1 Up::
+    setHotkeyState(False)
     If (!state)
         Send, {XButton1}
 Return
 
 XButton2 Up::
+    setHotkeyState(False)
     If (!state)
         Send, {XButton2}
 Return
