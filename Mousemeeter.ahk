@@ -61,15 +61,19 @@ Return
 ;Mouse-HOTKEYS
 XButton1::
     state := False
-    While GetKeyState("XButton1", "P")
+    While GetKeyState("XButton1", "P") {
         setHotkeyState(True)
+        Sleep 100
+    }
     setHotkeyState(False)
 Return
 
 XButton2::
     state := False
-    While GetKeyState("XButton2", "P")
+    While GetKeyState("XButton2", "P") {
         setHotkeyState(True)
+        Sleep 100
+    }
     setHotkeyState(False)
 Return
 
