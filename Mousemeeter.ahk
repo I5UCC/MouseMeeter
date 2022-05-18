@@ -1,19 +1,21 @@
-﻿#SingleInstance ignore
+﻿#SingleInstance Force
 #Persistent
-#NoTrayIcon
 #NoEnv
 SetWorkingDir %A_ScriptDir%
 SendMode Input
 #Include VMR.ahk/VMR.ahk
-
-global voicemeeter
-global state
 
 global OUTPUT_1 := 6
 global OUTPUT_2 := 7
 global OUTPUT_3 := 8
 global VOLUME_CHANGE_AMOUNT := 0.5
 global DEFAULT_VOLUME := -20
+
+global voicemeeter
+global state
+
+; Set audiodg.exe priority to High and set Affinity to one core to fix crackling noises
+Run, powershell "$Process = Get-Process audiodg; $Process.ProcessorAffinity=1; $Process.PriorityClass=""High""",, Hide
 
 setHotkeyState(False)
 voicemeeter := new Voicemeeter()
@@ -42,8 +44,6 @@ setHotkeyState(switch) {
 }
 
 ;KB-HOTKEYS
-#D:: Send !{Space}
-
 ^!F4::
     WinGet, active_id, PID, A
     run, taskkill /PID %active_id% /F,,Hide
