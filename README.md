@@ -3,6 +3,8 @@ A relatively simple Autohotkey script binding mouse keys to do Voicemeeter Potat
 This script primarily uses the mouse side buttons to control Voicemeeter (And also some other things). 
 These sidebuttons are normally used to go "Forward" or "Backward" on a page, these actions still work (Seen on the example picture).
 
+### *If you run the program as Admin it also automatically sets the affinity of "audiodg.exe" to only one core to fix the crackling noises that can occur in VoiceMeeter.*
+
 ## Macros:
 
 | Macro | Action |
