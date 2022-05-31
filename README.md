@@ -1,9 +1,11 @@
-# Mousemeeter - Control Voicemeeter Potato with your mouse!
+# <img src="https://user-images.githubusercontent.com/43730681/171195005-6a738083-34b6-418b-a73e-24d3cc11500c.png" width="32" height="32"> Mousemeeter - Control Voicemeeter Potato with your mouse!
+
 A relatively simple Autohotkey script binding mouse keys to do Voicemeeter Potato commands.
 This script primarily uses the mouse side buttons to control Voicemeeter (And also some other things). 
 These sidebuttons are normally used to go "Forward" or "Backward" on a page, these actions still work (Seen on the example picture).
 
-### *If you run the program as Admin it also automatically sets the affinity of "audiodg.exe" to only one core to fix the crackling noises that can occur in VoiceMeeter.*
+### *If you run the program as Admin it also automatically sets the affinity of "audiodg.exe" to only one core to fix the crackling noises that can occur in Voic!
+eMeeter.*
 
 ## Macros:
 
