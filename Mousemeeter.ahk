@@ -14,6 +14,7 @@ global DEFAULT_VOLUME := -20
 global voicemeeter
 global state
 
+Process, Priority,, High
 ; Set audiodg.exe priority to High and set Affinity to one core to fix crackling noises
 Run, powershell "$Process = Get-Process audiodg; $Process.ProcessorAffinity=1; $Process.PriorityClass=""High""",, Hide
 
