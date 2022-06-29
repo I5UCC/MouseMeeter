@@ -36,3 +36,8 @@ Releasing Backward/Forward without triggering any of the above macros will just 
 # Modifying the script
 
 Basically all of the communication with Voicemeeter happens in the Voicemeeter Class. To modify that, look into the [Documentation](https://saifaqqad.github.io/VMR.ahk/) of [VMR.ahk](https://github.com/SaifAqqad/VMR.ahk) to know how.
+
+# Credit
+
+[SaifAqqad](https://github.com/SaifAqqad) for their wrapper class for Voicemeeter's Remote API.
+[cocobelgica](https://github.com/cocobelgica) for their JSON module for AutoHotkey.
