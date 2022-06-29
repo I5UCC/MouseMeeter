@@ -4,43 +4,72 @@
 SetWorkingDir %A_ScriptDir%
 SendMode Input
 #Include VMR.ahk/VMR.ahk
+#Include Jxon.ahk
 
-global OUTPUT_1 := 6
-global OUTPUT_2 := 7
-global OUTPUT_3 := 8
-global VOLUME_CHANGE_AMOUNT := 0.5
-global DEFAULT_VOLUME := -20
+global OUTPUT_1
+global OUTPUT_2
+global OUTPUT_3
+global VOLUME_CHANGE_AMOUNT
+global DEFAULT_VOLUME
 
 global voicemeeter
 global state
+global isActivated
+global HotkeyState
 
 Process, Priority,, High
 ; Set audiodg.exe priority to High and set Affinity to one core to fix crackling noises
 Run, powershell "$Process = Get-Process audiodg; $Process.ProcessorAffinity=1; $Process.PriorityClass=""High""",, Hide
 
-setHotkeyState(False)
-voicemeeter := new Voicemeeter()
-voicemeeter.reset()
 
-;Methods
-notImplemented() {
+Init()
+
+notImplemented() { ;Placeholder
 
 }
 
-setHotkeyState(switch) {
-    If (switch) {
-        Hotkey, WheelUp, On
-        Hotkey, WheelDown, On
-        Hotkey, LButton, On
-        Hotkey, RButton, On
-        Hotkey, MButton, On
+Init() {
+    isActivated := True
+    HotkeyState := False
+    voicemeeter := new Voicemeeter()
+    voicemeeter.reset()
+    
+    Fileread, file, config.json
+    arr := Jxon_Load(file)
+    ProgramArray := []
+    for each, obj in arr {
+        switch each {
+            case "Settings":
+                for index, d in obj {
+                    OUTPUT_1 := d.OUTPUT_1
+                    OUTPUT_2 := d.OUTPUT_2
+                    OUTPUT_3 := d.OUTPUT_3
+                    VOLUME_CHANGE_AMOUNT := d.VOLUME_CHANGE_AMOUNT
+                    DEFAULT_VOLUME := d.DEFAULT_VOLUME
+                }
+            case "DeactivateOnWindow":
+                for index, d in obj {
+                    ProgramArray.Push(d)
+                }
+                default:
+                    MsgBox % "Error in Config file"
+                    ExitApp
+        }
     }
-    Else {
-        Hotkey, WheelUp, Off
-        Hotkey, WheelDown, Off
-        Hotkey, LButton, Off
-        Hotkey, RButton, Off
-        Hotkey, MButton, Off
+    MainLoop()
+}
+
+MainLoop() {
+    While (True) {
+        for index, element in ProgramArray
+        {
+            if WinActive(element) {
+                isActivated := False
+                WinWaitNotActive % element
+                isActivated := True
+            }
+        }
+        Sleep, 200
     }
 }
 
@@ -60,28 +89,33 @@ return
 Return
 
 ;Mouse-HOTKEYS
+#If isActivated
 XButton1::
     state := False
-    setHotkeyState(True)
+    HotkeyState := True
 Return
 
+#If isActivated
 XButton2::
     state := False
-    setHotkeyState(True)
+    HotkeyState := True
 Return
 
+#If isActivated
 XButton1 Up::
-    setHotkeyState(False)
+    HotkeyState := False
     If (!state)
         Send, {XButton1}
 Return
 
+#If isActivated
 XButton2 Up::
-    setHotkeyState(False)
+    HotkeyState := False
     If (!state)
         Send, {XButton2}
 Return
 
+#If isActivated && HotkeyState
 LButton::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
         notImplemented()
@@ -92,6 +126,7 @@ LButton::
     state := True
 Return
 
+#If isActivated && HotkeyState
 RButton::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
         notImplemented()
@@ -102,6 +137,7 @@ RButton::
     state := True
 Return
 
+#If isActivated && HotkeyState
 MButton::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
         notImplemented()
@@ -112,6 +148,7 @@ MButton::
     state := True
 Return
 
+#If isActivated && HotkeyState
 WheelUp::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VAIO3
         voicemeeter.volumeUp(OUTPUT_3)
@@ -122,6 +159,7 @@ WheelUp::
     state := True
 Return
 
+#If isActivated && HotkeyState
 WheelDown::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VAIO3
         voicemeeter.volumeDown(OUTPUT_3)
