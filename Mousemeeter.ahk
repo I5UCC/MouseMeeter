@@ -13,7 +13,6 @@ global VOLUME_CHANGE_AMOUNT
 global DEFAULT_VOLUME
 
 global voicemeeter
-global state
 global isActivated
 global HotkeyState
 
@@ -91,27 +90,25 @@ Return
 ;Mouse-HOTKEYS
 #If isActivated
 XButton1::
-    state := False
     HotkeyState := True
 Return
 
 #If isActivated
 XButton2::
-    state := False
     HotkeyState := True
 Return
 
 #If isActivated
 XButton1 Up::
     HotkeyState := False
-    If (!state)
+    If (A_PriorHotkey == "XButton1")
         Send, {XButton1}
 Return
 
 #If isActivated
 XButton2 Up::
     HotkeyState := False
-    If (!state)
+    If (A_PriorHotkey == "XButton2")
         Send, {XButton2}
 Return
 
@@ -123,7 +120,6 @@ LButton::
         notImplemented()
     Else If (GetKeyState("XButton2","P"))
         Send, {Media_Prev}
-    state := True
 Return
 
 #If isActivated && HotkeyState
@@ -134,7 +130,6 @@ RButton::
         notImplemented()
     Else If (GetKeyState("XButton2","P"))
         Send, {Media_Next}
-    state := True
 Return
 
 #If isActivated && HotkeyState
@@ -145,7 +140,6 @@ MButton::
         notImplemented()
     Else If (GetKeyState("XButton2","P"))
         Send, {Media_Play_Pause}
-    state := True
 Return
 
 #If isActivated && HotkeyState
@@ -156,7 +150,6 @@ WheelUp::
         voicemeeter.volumeUp(OUTPUT_1)
     Else If (GetKeyState("XButton2","P")) ;AUX
         voicemeeter.volumeUp(OUTPUT_2)
-    state := True
 Return
 
 #If isActivated && HotkeyState
@@ -167,7 +160,6 @@ WheelDown::
         voicemeeter.volumeDown(OUTPUT_1)
     Else If (GetKeyState("XButton2","P")) ;AUX
         voicemeeter.volumeDown(OUTPUT_2)
-    state := True
 Return
 
 F24::
@@ -188,7 +180,6 @@ F24::
         Else
             voicemeeter.setMainOutput("A3")
     }
-    state := True
 Return
 
 ;Classes
