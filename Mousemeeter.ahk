@@ -15,6 +15,7 @@ global DEFAULT_VOLUME
 global voicemeeter
 global isActivated
 global HotkeyState
+global ProgramArray
 
 Process, Priority,, High
 ; Set audiodg.exe priority to High and set Affinity to one core to fix crackling noises
