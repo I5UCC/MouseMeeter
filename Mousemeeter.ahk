@@ -9,18 +9,15 @@ SendMode Input
 global OUTPUT_1
 global OUTPUT_2
 global OUTPUT_3
+global DEFAULT_VOLUME1
+global DEFAULT_VOLUME2
+global DEFAULT_VOLUME3
 global VOLUME_CHANGE_AMOUNT
-global DEFAULT_VOLUME
 
 global voicemeeter
 global isActivated
 global HotkeyState
 global ProgramArray
-
-Process, Priority,, High
-; Set audiodg.exe priority to High and set Affinity to one core to fix crackling noises
-Run, powershell "$Process = Get-Process audiodg; $Process.ProcessorAffinity=1; $Process.PriorityClass=""High""",, Hide
-
 
 Init()
 
@@ -29,33 +26,54 @@ notImplemented() { ;Placeholder
 }
 
 Init() {
+    SetAffinity := True
+    SetCracklingFix := True
+    TitleMatchMode := 3
+    ResetOnStartup := True
+
     isActivated := True
     HotkeyState := False
-    voicemeeter := new Voicemeeter()
-    voicemeeter.reset()
+    ProgramArray := []
     
     Fileread, file, config.json
-    arr := Jxon_Load(file)
-    ProgramArray := []
-    for each, obj in arr {
+    config := Jxon_Load(file)
+    for each, obj in config {
         switch each {
             case "Settings":
                 for index, d in obj {
+                    TitleMatchMode := d.TitleMatchMode
+                    ResetOnStartup := d.ResetOnStartup
+                    SetAffinity := d.SetAffinity
+                    SetCracklingFix := d.SetCracklingFix
                     OUTPUT_1 := d.OUTPUT_1
                     OUTPUT_2 := d.OUTPUT_2
                     OUTPUT_3 := d.OUTPUT_3
+                    DEFAULT_VOLUME1 := d.DEFAULT_VOLUME1
+                    DEFAULT_VOLUME2 := d.DEFAULT_VOLUME2
+                    DEFAULT_VOLUME3 := d.DEFAULT_VOLUME3
                     VOLUME_CHANGE_AMOUNT := d.VOLUME_CHANGE_AMOUNT
-                    DEFAULT_VOLUME := d.DEFAULT_VOLUME
                 }
             case "DeactivateOnWindow":
                 for index, d in obj {
                     ProgramArray.Push(d)
                 }
-                default:
-                    MsgBox % "Error in Config file"
-                    ExitApp
+            default:
+                MsgBox % "Error in Config file"
+                ExitApp
         }
     }
+
+    voicemeeter := new Voicemeeter()
+
+    If (SetAffinity)
+        Process, Priority,, High
+    If (SetCracklingFix)
+        Run, powershell "$Process = Get-Process audiodg; $Process.ProcessorAffinity=1; $Process.PriorityClass=""High""",, Hide
+    If (ResetOnStartup)
+        voicemeeter.reset()
+
+    SetTitleMatchMode, %TitleMatchMode%
+
     MainLoop()
 }
 
@@ -69,7 +87,7 @@ MainLoop() {
                 isActivated := True
             }
         }
-        Sleep, 200
+        Sleep, 500
     }
 }
 
@@ -94,19 +112,16 @@ XButton1::
     HotkeyState := True
 Return
 
-#If isActivated
 XButton2::
     HotkeyState := True
 Return
 
-#If isActivated
 XButton1 Up::
     HotkeyState := False
     If (A_PriorHotkey == "XButton1")
         Send, {XButton1}
 Return
 
-#If isActivated
 XButton2 Up::
     HotkeyState := False
     If (A_PriorHotkey == "XButton2")
@@ -123,7 +138,6 @@ LButton::
         Send, {Media_Prev}
 Return
 
-#If isActivated && HotkeyState
 RButton::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
         notImplemented()
@@ -133,7 +147,6 @@ RButton::
         Send, {Media_Next}
 Return
 
-#If isActivated && HotkeyState
 MButton::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
         notImplemented()
@@ -143,7 +156,6 @@ MButton::
         Send, {Media_Play_Pause}
 Return
 
-#If isActivated && HotkeyState
 WheelUp::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VAIO3
         voicemeeter.volumeUp(OUTPUT_3)
@@ -153,7 +165,6 @@ WheelUp::
         voicemeeter.volumeUp(OUTPUT_2)
 Return
 
-#If isActivated && HotkeyState
 WheelDown::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VAIO3
         voicemeeter.volumeDown(OUTPUT_3)
@@ -163,6 +174,7 @@ WheelDown::
         voicemeeter.volumeDown(OUTPUT_2)
 Return
 
+#If
 F24::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VAIO3
         voicemeeter.volumeMute(OUTPUT_3)
@@ -249,9 +261,9 @@ Class Voicemeeter {
     reset() {
         this.setMainOutput("A1")
 
-        this.vm.strip[OUTPUT_1].gain := DEFAULT_VOLUME
-        this.vm.strip[OUTPUT_2].gain := DEFAULT_VOLUME
-        this.vm.strip[OUTPUT_3].gain := DEFAULT_VOLUME
+        this.vm.strip[OUTPUT_1].gain := DEFAULT_VOLUME1
+        this.vm.strip[OUTPUT_2].gain := DEFAULT_VOLUME2
+        this.vm.strip[OUTPUT_3].gain := DEFAULT_VOLUME3
 
         for i, strip in this.vm.strip {
             strip.mute := 0

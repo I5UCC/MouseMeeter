@@ -1,15 +1,20 @@
 {
   "DeactivateOnWindow": [
-    "MonsterHunterRise",
-    "Steam"
+
   ],
   "Settings": [
     {
+      "TitleMatchMode": 3,
+      "ResetOnStartup": 1,
+      "SetAffinity": 1,
+      "SetCracklingFix": 1,
       "OUTPUT_1": 6,
       "OUTPUT_2": 7,
       "OUTPUT_3": 8,
-      "VOLUME_CHANGE_AMOUNT": 0.5,
-      "DEFAULT_VOLUME": -20
+      "DEFAULT_VOLUME1": -25,
+      "DEFAULT_VOLUME2": -20,
+      "DEFAULT_VOLUME3": -10,
+      "VOLUME_CHANGE_AMOUNT": 0.5
     }
   ]
 }
