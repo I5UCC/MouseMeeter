@@ -2,3 +2,6 @@
 	path = VMR.ahk
 	url = https://github.com/SaifAqqad/VMR.ahk
 	branch = master
+[submodule "AutoHotkey-JSON"]
+	path = AutoHotkey-JSON
+	url = https://github.com/cocobelgica/AutoHotkey-JSON

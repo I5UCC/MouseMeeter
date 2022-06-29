@@ -4,7 +4,7 @@
 SetWorkingDir %A_ScriptDir%
 SendMode Input
 #Include VMR.ahk/VMR.ahk
-#Include Jxon.ahk
+#Include AutoHotkey-JSON/Jxon.ahk
 
 global OUTPUT_1
 global OUTPUT_2
