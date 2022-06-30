@@ -80,8 +80,14 @@ Init() {
         }
     }
 
-    if (!A_IsAdmin && RunAsAdmin)
-	    Run *RunAs "%A_ScriptFullPath%"
+    if (!A_IsAdmin && RunAsAdmin) {
+        Try {
+	        Run *RunAs "%A_ScriptFullPath%"
+        } catch {
+            MsgBox % "Declined Admin Rights, if you want to start this up without admin rights, change 'RunAsAdmin' to 0 in config.json"
+            ExitApp
+        }
+    }
 
     If (SetAffinity)
         Process, Priority,, High
