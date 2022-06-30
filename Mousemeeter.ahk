@@ -17,105 +17,88 @@ SetBatchLines -1
 SetWorkingDir %A_ScriptDir%
 SendMode Input
 #Include VMR.ahk/VMR.ahk
-#Include AutoHotkey-JSON/Jxon.ahk
 
-global OUTPUT_1
-global OUTPUT_2
-global OUTPUT_3
-global DEFAULT_VOLUME1
-global DEFAULT_VOLUME2
-global DEFAULT_VOLUME3
-global VOLUME_CHANGE_AMOUNT
+global RunAsAdmin := True
+global TitleMatchMode := 3
+global ResetOnStartup := True
+global SetAffinity := True
+global SetCracklingFix := True
+global OUTPUT_1 := 6
+global OUTPUT_2 := 7
+global OUTPUT_3 := 8
+global DEFAULT_VOLUME1 := -25
+global DEFAULT_VOLUME2 := -20
+global DEFAULT_VOLUME3 := -10
+global VOLUME_CHANGE_AMOUNT := 0.5
 
-global voicemeeter
-global isActivated
-global HotkeyState
-global ProgramArray
+global voicemeeter := new Voicemeeter()
+global isActivated := True
+global HotkeyState := False
+global DeactivateOnWindow := False
 
-Init()
+If (FileExist("config.ini"))
+    ReadConfigIni()
 
-
-
-notImplemented() { ;Placeholder
-
+if (!A_IsAdmin && RunAsAdmin) {
+    Try {
+	    Run *RunAs "%A_ScriptFullPath%"
+    } catch {
+        MsgBox % "Declined Elevation, if you want to start this up without Admin Rights, change 'RunAsAdmin' to 0 in config.json"
+        ExitApp
+    }
 }
 
-Init() {
-    SetAffinity := True
-    SetCracklingFix := True
-    TitleMatchMode := 3
-    ResetOnStartup := True
-    RunAsAdmin := True
+SetTitleMatchMode, %TitleMatchMode%
 
-    isActivated := True
-    HotkeyState := False
-    ProgramArray := []
-    
-    Fileread, file, config.json
-    config := Jxon_Load(file)
-    for each, obj in config {
-        switch each {
-            case "Settings":
-                for index, d in obj {
-                    RunAsAdmin := d.RunAsAdmin
-                    TitleMatchMode := d.TitleMatchMode
-                    ResetOnStartup := d.ResetOnStartup
-                    SetAffinity := d.SetAffinity
-                    SetCracklingFix := d.SetCracklingFix
-                    OUTPUT_1 := d.OUTPUT_1
-                    OUTPUT_2 := d.OUTPUT_2
-                    OUTPUT_3 := d.OUTPUT_3
-                    DEFAULT_VOLUME1 := d.DEFAULT_VOLUME1
-                    DEFAULT_VOLUME2 := d.DEFAULT_VOLUME2
-                    DEFAULT_VOLUME3 := d.DEFAULT_VOLUME3
-                    VOLUME_CHANGE_AMOUNT := d.VOLUME_CHANGE_AMOUNT
-                }
-            case "DeactivateOnWindow":
-                for index, d in obj {
-                    ProgramArray.Push(d)
-                }
-            default:
-                MsgBox % "Error in Config file"
-                ExitApp
-        }
-    }
+If (SetAffinity)
+    Process, Priority,, High
 
-    if (!A_IsAdmin && RunAsAdmin) {
-        Try {
-	        Run *RunAs "%A_ScriptFullPath%"
-        } catch {
-            MsgBox % "Declined Admin Rights, if you want to start this up without admin rights, change 'RunAsAdmin' to 0 in config.json"
-            ExitApp
-        }
-    }
+If (SetCracklingFix)
+    Run, powershell "$Process = Get-Process audiodg; $Process.ProcessorAffinity=1; $Process.PriorityClass=""High""",, Hide
 
-    If (SetAffinity)
-        Process, Priority,, High
-    
-    voicemeeter := new Voicemeeter()
-    If (ResetOnStartup)
-        voicemeeter.reset()
-    
-    SetTitleMatchMode, %TitleMatchMode%
+If (ResetOnStartup)
+    voicemeeter.reset()
 
-    If (SetCracklingFix)
-        Run, powershell "$Process = Get-Process audiodg; $Process.ProcessorAffinity=1; $Process.PriorityClass=""High""",, Hide
-
-    MainLoop()
-}
+MainLoop()
 
 MainLoop() {
-    While (True) {
-        for index, element in ProgramArray
+    If (DeactivateOnWindow) {
+        Loop 
         {
-            if WinActive(element) {
-                isActivated := False
-                WinWaitNotActive % element
-                isActivated := True
+            Loop, Parse, DeactivateOnWindow, `n,`r 
+            {
+                if WinActive(A_LoopField) {
+                    isActivated := False
+                    WinWaitNotActive % A_LoopField
+                    isActivated := True
+                }
             }
-        }
         Sleep, 500
+        }
     }
+}
+
+ReadConfigIni() {
+    IniRead, SettingSectionExist, config.ini, Settings
+    If (SettingSectionExist) {
+        IniRead, RunAsAdmin, config.ini, Settings, RunAsAdmin
+        IniRead, TitleMatchMode, config.ini, Settings, TitleMatchMode
+        IniRead, ResetOnStartup, config.ini, Settings, ResetOnStartup
+        IniRead, SetAffinity, config.ini, Settings, SetAffinity
+        IniRead, SetCracklingFix, config.ini, Settings, SetCracklingFix
+
+        IniRead, OUTPUT_1, config.ini, Settings, OUTPUT_1
+        IniRead, OUTPUT_2, config.ini, Settings, OUTPUT_2
+        IniRead, OUTPUT_3, config.ini, Settings, OUTPUT_3
+
+        IniRead, DEFAULT_VOLUME1, config.ini, Settings, DEFAULT_VOLUME1
+        IniRead, DEFAULT_VOLUME2, config.ini, Settings, DEFAULT_VOLUME2
+        IniRead, DEFAULT_VOLUME3, config.ini, Settings, DEFAULT_VOLUME3
+
+        IniRead, VOLUME_CHANGE_AMOUNT, config.ini, Settings, VOLUME_CHANGE_AMOUNT
+    }
+    
+    IniRead, DeactivateOnWindow, config.ini, DeactivateOnWindow
 }
 
 ;KB-HOTKEYS
@@ -158,27 +141,27 @@ Return
 #If isActivated && HotkeyState
 LButton::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
-        notImplemented()
+        Send, {LButton}
     Else If (GetKeyState("XButton1","P"))
-        notImplemented()
+        Send, {LButton}
     Else If (GetKeyState("XButton2","P"))
         Send, {Media_Prev}
 Return
 
 RButton::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
-        notImplemented()
+        Send, {RButton}
     Else If (GetKeyState("XButton1","P"))
-        notImplemented()
+        Send, {RButton}
     Else If (GetKeyState("XButton2","P"))
         Send, {Media_Next}
 Return
 
 MButton::
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
-        notImplemented()
+        Send, {MButton}
     Else If (GetKeyState("XButton1","P"))
-        notImplemented()
+        Send, {MButton}
     Else If (GetKeyState("XButton2","P"))
         Send, {Media_Play_Pause}
 Return
