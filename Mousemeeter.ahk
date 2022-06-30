@@ -1,6 +1,19 @@
-﻿#SingleInstance Force
+﻿;@Ahk2Exe-Let Version = 1.4
+;@Ahk2Exe-IgnoreBegin
+;@Ahk2Exe-IgnoreEnd
+;@Ahk2Exe-SetMainIcon icon.ico
+;@Ahk2Exe-SetVersion %U_Version%
+;@Ahk2Exe-SetName Mousemeeter
+;@Ahk2Exe-SetDescription Mousemeeter
+;@Ahk2Exe-Bin Unicode 64*
+;@Ahk2Exe-Obey U_au, = "%A_IsUnicode%" ? 2 : 1 ; .Bin file ANSI or Unicode?
+;@Ahk2Exe-PostExec "BinMod.exe" "%A_WorkFileName%"
+;@Ahk2Exe-Cont  "%U_au%2.>AUTOHOTKEY SCRIPT<. DATA              "
+
+#SingleInstance Force
 #Persistent
 #NoEnv
+SetBatchLines -1
 SetWorkingDir %A_ScriptDir%
 SendMode Input
 #Include VMR.ahk/VMR.ahk
@@ -21,6 +34,8 @@ global ProgramArray
 
 Init()
 
+
+
 notImplemented() { ;Placeholder
 
 }
@@ -30,6 +45,7 @@ Init() {
     SetCracklingFix := True
     TitleMatchMode := 3
     ResetOnStartup := True
+    RunAsAdmin := True
 
     isActivated := True
     HotkeyState := False
@@ -41,6 +57,7 @@ Init() {
         switch each {
             case "Settings":
                 for index, d in obj {
+                    RunAsAdmin := d.RunAsAdmin
                     TitleMatchMode := d.TitleMatchMode
                     ResetOnStartup := d.ResetOnStartup
                     SetAffinity := d.SetAffinity
@@ -63,16 +80,20 @@ Init() {
         }
     }
 
-    voicemeeter := new Voicemeeter()
+    if (!A_IsAdmin && RunAsAdmin)
+	    Run *RunAs "%A_ScriptFullPath%"
 
     If (SetAffinity)
         Process, Priority,, High
-    If (SetCracklingFix)
-        Run, powershell "$Process = Get-Process audiodg; $Process.ProcessorAffinity=1; $Process.PriorityClass=""High""",, Hide
+    
+    voicemeeter := new Voicemeeter()
     If (ResetOnStartup)
         voicemeeter.reset()
-
+    
     SetTitleMatchMode, %TitleMatchMode%
+
+    If (SetCracklingFix)
+        Run, powershell "$Process = Get-Process audiodg; $Process.ProcessorAffinity=1; $Process.PriorityClass=""High""",, Hide
 
     MainLoop()
 }

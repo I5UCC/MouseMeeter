@@ -4,6 +4,7 @@
   ],
   "Settings": [
     {
+      "RunAsAdmin": 1,
       "TitleMatchMode": 3,
       "ResetOnStartup": 1,
       "SetAffinity": 1,
