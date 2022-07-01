@@ -31,6 +31,13 @@ global DEFAULT_VOLUME2 := -20
 global DEFAULT_VOLUME3 := -10
 global VOLUME_CHANGE_AMOUNT := 0.5
 
+global MainOutput = A1
+global SecondOutput = A2
+global ThirdOutput = A3
+global MuteStipsOnMain = 0
+global MuteStipsOnSecond = 0
+global MuteStipsOnThird = 0
+
 global voicemeeter := new Voicemeeter()
 global isActivated := True
 global HotkeyState := False
@@ -86,16 +93,26 @@ ReadConfigIni() {
         IniRead, ResetOnStartup, config.ini, Settings, ResetOnStartup
         IniRead, SetAffinity, config.ini, Settings, SetAffinity
         IniRead, SetCracklingFix, config.ini, Settings, SetCracklingFix
+    }
+    
+    IniRead, VoicemeeterSectionExist, config.ini, VoicemeeterSettings
+    If (VoicemeeterSectionExist) {
+        IniRead, OUTPUT_1, config.ini, VoicemeeterSettings, OUTPUT_1
+        IniRead, OUTPUT_2, config.ini, VoicemeeterSettings, OUTPUT_2
+        IniRead, OUTPUT_3, config.ini, VoicemeeterSettings, OUTPUT_3
 
-        IniRead, OUTPUT_1, config.ini, Settings, OUTPUT_1
-        IniRead, OUTPUT_2, config.ini, Settings, OUTPUT_2
-        IniRead, OUTPUT_3, config.ini, Settings, OUTPUT_3
+        IniRead, DEFAULT_VOLUME1, config.ini, VoicemeeterSettings, DEFAULT_VOLUME1
+        IniRead, DEFAULT_VOLUME2, config.ini, VoicemeeterSettings, DEFAULT_VOLUME2
+        IniRead, DEFAULT_VOLUME3, config.ini, VoicemeeterSettings, DEFAULT_VOLUME3
 
-        IniRead, DEFAULT_VOLUME1, config.ini, Settings, DEFAULT_VOLUME1
-        IniRead, DEFAULT_VOLUME2, config.ini, Settings, DEFAULT_VOLUME2
-        IniRead, DEFAULT_VOLUME3, config.ini, Settings, DEFAULT_VOLUME3
+        IniRead, VOLUME_CHANGE_AMOUNT, config.ini, VoicemeeterSettings, VOLUME_CHANGE_AMOUNT
 
-        IniRead, VOLUME_CHANGE_AMOUNT, config.ini, Settings, VOLUME_CHANGE_AMOUNT
+        IniRead, MainOutput, config.ini, VoicemeeterSettings, MainOutput
+        IniRead, SecondOutput, config.ini, VoicemeeterSettings, SecondOutput
+        IniRead, ThirdOutput, config.ini, VoicemeeterSettings, ThirdOutput
+        IniRead, MuteStipsOnMain, config.ini, VoicemeeterSettings, MuteStipsOnMain
+        IniRead, MuteStipsOnSecond, config.ini, VoicemeeterSettings, MuteStipsOnSecond
+        IniRead, MuteStipsOnThird, config.ini, VoicemeeterSettings, MuteStipsOnThird
     }
     
     IniRead, DeactivateOnWindow, config.ini, DeactivateOnWindow
@@ -195,13 +212,10 @@ F24::
     Else {
         KeyWait, %A_ThisHotkey%
         KeyWait, %A_ThisHotkey%, d t0.250
-        If (Errorlevel) {
-            voicemeeter.setMainOutput("A2")
-            voicemeeter.volumeMute(2, 1)
-            voicemeeter.volumeMute(1)
-        }
+        If (Errorlevel)
+            voicemeeter.setMainOutput(SecondOutput)
         Else
-            voicemeeter.setMainOutput("A3")
+            voicemeeter.setMainOutput(ThirdOutput)
     }
 Return
 
@@ -233,16 +247,16 @@ Class Voicemeeter {
         switch output {
             case "A2": 
                 If (this.vm.strip[OUTPUT_1].A2)
-                    output := "A1"
+                    output := MainOutput
             case "A3":
                 If (this.vm.strip[OUTPUT_1].A3)
-                    output := "A1"
+                    output := MainOutput
             case "A4":
                 If (this.vm.strip[OUTPUT_1].A4)
-                    output := "A1"
+                    output := MainOutput
             case "A5":
                 If (this.vm.strip[OUTPUT_1].A5)
-                    output := "A1"
+                    output := MainOutput
         }
         for i, strip in this.vm.strip {
             If (i > 5) {
@@ -259,9 +273,28 @@ Class Voicemeeter {
                     case "A5": strip.A5 := 1
                 }
             }
-            If (unmute)
-                strip.mute := 0
+            strip.mute := 0
         }
+
+        If (output == MainOutput) {
+            Loop, Parse, MuteStipsOnMain, `,
+            {
+                this.volumeMute(A_LoopField, 1)
+            }
+        }
+        Else If (output == SecondOutput) {
+            Loop, Parse, MuteStipsOnSecond, `,
+            {
+                this.volumeMute(A_LoopField, 1)
+            }
+        }
+        Else If (output == ThirdOutput) {
+            Loop, Parse, MuteStipsOnThird, `,
+            {
+                this.volumeMute(A_LoopField, 1)
+            }
+        }
+
     }
 
     restart() {
@@ -274,12 +307,6 @@ Class Voicemeeter {
         this.vm.strip[OUTPUT_1].gain := DEFAULT_VOLUME1
         this.vm.strip[OUTPUT_2].gain := DEFAULT_VOLUME2
         this.vm.strip[OUTPUT_3].gain := DEFAULT_VOLUME3
-
-        for i, strip in this.vm.strip {
-            strip.mute := 0
-        }
-
-        this.volumeMute(2, 1)
 
         this.restart()
     }
