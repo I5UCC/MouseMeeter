@@ -40,4 +40,3 @@ Basically all of the communication with Voicemeeter happens in the Voicemeeter C
 # Credit
 
 [SaifAqqad](https://github.com/SaifAqqad) for their wrapper class for Voicemeeter's Remote API. <br>
-[cocobelgica](https://github.com/cocobelgica) for their JSON module for AutoHotkey.
