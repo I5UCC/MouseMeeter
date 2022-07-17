@@ -43,30 +43,65 @@ global isActivated := True
 global HotkeyState := False
 global DeactivateOnWindow := False
 
-If (FileExist("config.ini"))
-    ReadConfigIni()
+Menu, Tray, DeleteAll
+Menu, Tray, NoStandard
+Menu, Tray, UseErrorLevel, On
+Menu, Tray, Add, Reload, ReloadHandler
+Menu, Tray, Add, Refresh Config, RefreshHandler
+Menu, Tray, Add,
+Menu, Tray, Add, Open Config, OpenConfigHandler
+Menu, Tray, Add,
+Menu, Tray, Add, Exit, ExitHandler
 
-if (!A_IsAdmin && RunAsAdmin) {
-    Try {
-	    Run *RunAs "%A_ScriptFullPath%"
-    } catch {
-        MsgBox % "Declined Elevation, if you want to start this up without Admin Rights, change 'RunAsAdmin' to 0 in config.json"
-        ExitApp
+Start()
+Return
+
+ReloadHandler:
+    Reload
+return
+
+RefreshHandler:
+    If (FileExist("config.ini"))
+        ReadConfigIni()
+return
+
+OpenConfigHandler:
+    If (FileExist("config.ini")) {
+        RunWait, config.ini
+        ReadConfigIni()
     }
+return
+
+ExitHandler:
+    ExitApp
+return
+
+Start() {
+    If (FileExist("config.ini"))
+        ReadConfigIni()
+
+    if (!A_IsAdmin && RunAsAdmin) {
+        Try {
+	        Run *RunAs "%A_ScriptFullPath%"
+        } catch {
+            MsgBox % "Declined Elevation, if you want to start this up without Admin Rights, change 'RunAsAdmin' to 0 in config.json"
+            ExitApp
+        }
+    }
+
+    SetTitleMatchMode, %TitleMatchMode%
+
+    If (SetAffinity)
+        Process, Priority,, High
+
+    If (SetCracklingFix)
+        Run, powershell "$Process = Get-Process audiodg; $Process.ProcessorAffinity=1; $Process.PriorityClass=""High""",, Hide
+
+    If (ResetOnStartup)
+        voicemeeter.reset()
+
+    MainLoop()
 }
-
-SetTitleMatchMode, %TitleMatchMode%
-
-If (SetAffinity)
-    Process, Priority,, High
-
-If (SetCracklingFix)
-    Run, powershell "$Process = Get-Process audiodg; $Process.ProcessorAffinity=1; $Process.PriorityClass=""High""",, Hide
-
-If (ResetOnStartup)
-    voicemeeter.reset()
-
-MainLoop()
 
 MainLoop() {
     If (DeactivateOnWindow) {
