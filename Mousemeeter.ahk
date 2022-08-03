@@ -114,6 +114,7 @@ MainLoop() {
                     WinWaitNotActive % A_LoopField
                     isActivated := True
                 }
+                Sleep, 300
             }
         Sleep, 500
         }
