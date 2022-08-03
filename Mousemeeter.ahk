@@ -171,11 +171,19 @@ Return
 ;Mouse-HOTKEYS
 #If isActivated
 XButton1::
-    HotkeyState := True
+    While GetKeyState("XButton1", "P") {
+        HotkeyState := True
+        Sleep 100
+    }
+    HotkeyState := False
 Return
 
 XButton2::
-    HotkeyState := True
+    While GetKeyState("XButton2", "P") {
+        HotkeyState := True
+        Sleep 100
+    }
+    HotkeyState := False
 Return
 
 XButton1 Up::
