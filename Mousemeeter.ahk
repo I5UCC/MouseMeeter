@@ -174,7 +174,7 @@ Return
 XButton1::
     While GetKeyState("XButton1", "P") {
         HotkeyState := True
-        Sleep 100
+        Sleep 200
     }
     HotkeyState := False
 Return
@@ -182,7 +182,7 @@ Return
 XButton2::
     While GetKeyState("XButton2", "P") {
         HotkeyState := True
-        Sleep 100
+        Sleep 200
     }
     HotkeyState := False
 Return
