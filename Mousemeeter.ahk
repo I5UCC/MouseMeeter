@@ -7,8 +7,6 @@
 ;@Ahk2Exe-SetDescription Mousemeeter
 ;@Ahk2Exe-Bin Unicode 64*
 ;@Ahk2Exe-Obey U_au, = "%A_IsUnicode%" ? 2 : 1 ; .Bin file ANSI or Unicode?
-;@Ahk2Exe-PostExec "BinMod.exe" "%A_WorkFileName%"
-;@Ahk2Exe-Cont  "%U_au%2.>AUTOHOTKEY SCRIPT<. DATA              "
 
 #SingleInstance Force
 #Persistent
@@ -26,9 +24,6 @@ global SetCracklingFix := True
 global OUTPUT_1 := 6
 global OUTPUT_2 := 7
 global OUTPUT_3 := 8
-global DEFAULT_VOLUME1 := -25
-global DEFAULT_VOLUME2 := -20
-global DEFAULT_VOLUME3 := -10
 global VOLUME_CHANGE_AMOUNT := 0.5
 
 global MainOutput = A1
@@ -136,10 +131,6 @@ ReadConfigIni() {
         IniRead, OUTPUT_1, config.ini, VoicemeeterSettings, OUTPUT_1
         IniRead, OUTPUT_2, config.ini, VoicemeeterSettings, OUTPUT_2
         IniRead, OUTPUT_3, config.ini, VoicemeeterSettings, OUTPUT_3
-
-        IniRead, DEFAULT_VOLUME1, config.ini, VoicemeeterSettings, DEFAULT_VOLUME1
-        IniRead, DEFAULT_VOLUME2, config.ini, VoicemeeterSettings, DEFAULT_VOLUME2
-        IniRead, DEFAULT_VOLUME3, config.ini, VoicemeeterSettings, DEFAULT_VOLUME3
 
         IniRead, VOLUME_CHANGE_AMOUNT, config.ini, VoicemeeterSettings, VOLUME_CHANGE_AMOUNT
 
@@ -342,16 +333,10 @@ Class Voicemeeter {
     }
 
     restart() {
-        voicemeeter.vm.command.restart()
+        this.vm.command.restart()
     }
 
     reset() {
-        this.setMainOutput("A1")
-
-        this.vm.strip[OUTPUT_1].gain := DEFAULT_VOLUME1
-        this.vm.strip[OUTPUT_2].gain := DEFAULT_VOLUME2
-        this.vm.strip[OUTPUT_3].gain := DEFAULT_VOLUME3
-
-        this.restart()
+        this.vm.command.load(A_ScriptDir . "\VoicemeeterDefault.xml")
     }
 }
