@@ -337,6 +337,6 @@ Class Voicemeeter {
     }
 
     reset() {
-        this.vm.command.load(A_ScriptDir . "\VoicemeeterDefault.xml")
+        this.vm.command.load(A_ScriptDir . "\Default.xml")
     }
 }
