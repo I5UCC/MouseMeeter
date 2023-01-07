@@ -6,7 +6,7 @@ These sidebuttons are normally used to go "Forward" or "Backward" on a page, the
 
 Loads a "default.xml" file on start and reset. Create one with the save feature of Voicemeeter and place it in the same folder.
 
-### *If you run the program as Admin it also automatically sets the affinity of "audiodg.exe" to only one core to fix the crackling noises that can occur in VoiceMeeter.*
+### *If you run the program as Admin it also automatically sets the affinity of "audiodg.exe" to only one core to fix the crackling noises that can occur in VoiceMeeter. Otherwise, elevation is not needed.*
 
 ## Macros:
 
