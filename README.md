@@ -1,3 +1,4 @@
+[![Github All Releases](https://img.shields.io/github/downloads/i5ucc/Mousemeeter/total.svg)](https://github.com/I5UCC/Mousemeeter/releases/latest)
 # <img src="https://user-images.githubusercontent.com/43730681/171195005-6a738083-34b6-418b-a73e-24d3cc11500c.png" width="32" height="32"> Mousemeeter - Control Voicemeeter Potato with your mouse!
 
 A relatively simple Autohotkey script binding mouse keys to do Voicemeeter Potato commands.
