@@ -26,17 +26,14 @@ global OUTPUT_2 := 7
 global OUTPUT_3 := 8
 global VOLUME_CHANGE_AMOUNT := 0.5
 
-global MainOutput = A1
-global SecondOutput = A2
-global ThirdOutput = A3
-global MuteStipsOnMain = 0
-global MuteStipsOnSecond = 0
-global MuteStipsOnThird = 0
-
 global voicemeeter := new Voicemeeter()
 global isActivated := True
 global HotkeyState := False
 global DeactivateOnWindow := False
+
+global default_file := "default.xml"
+global profile1_file := "profile1.xml"
+global profile2_file := "profile2.xml"
 
 Menu, Tray, DeleteAll
 Menu, Tray, NoStandard
@@ -93,7 +90,7 @@ Start() {
         Run, powershell "$Process = Get-Process audiodg; $Process.ProcessorAffinity=1; $Process.PriorityClass=""High""",, Hide
 
     If (ResetOnStartup)
-        voicemeeter.reset()
+        voicemeeter.load(default_file)
 
     MainLoop()
 }
@@ -131,15 +128,10 @@ ReadConfigIni() {
         IniRead, OUTPUT_1, config.ini, VoicemeeterSettings, OUTPUT_1
         IniRead, OUTPUT_2, config.ini, VoicemeeterSettings, OUTPUT_2
         IniRead, OUTPUT_3, config.ini, VoicemeeterSettings, OUTPUT_3
-
         IniRead, VOLUME_CHANGE_AMOUNT, config.ini, VoicemeeterSettings, VOLUME_CHANGE_AMOUNT
-
-        IniRead, MainOutput, config.ini, VoicemeeterSettings, MainOutput
-        IniRead, SecondOutput, config.ini, VoicemeeterSettings, SecondOutput
-        IniRead, ThirdOutput, config.ini, VoicemeeterSettings, ThirdOutput
-        IniRead, MuteStipsOnMain, config.ini, VoicemeeterSettings, MuteStipsOnMain
-        IniRead, MuteStipsOnSecond, config.ini, VoicemeeterSettings, MuteStipsOnSecond
-        IniRead, MuteStipsOnThird, config.ini, VoicemeeterSettings, MuteStipsOnThird
+        IniRead, default_file, config.ini, VoicemeeterSettings, default_file
+        IniRead, profile1_file, config.ini, VoicemeeterSettings, profile1_file
+        IniRead, profile2_file, config.ini, VoicemeeterSettings, profile2_file
     }
     
     IniRead, DeactivateOnWindow, config.ini, DeactivateOnWindow
@@ -157,7 +149,7 @@ return
     If (Errorlevel)
         voicemeeter.restart()
     Else
-        voicemeeter.reset()
+        voicemeeter.load(default_file)
 Return
 
 ;Mouse-HOTKEYS
@@ -248,9 +240,9 @@ F24::
         KeyWait, %A_ThisHotkey%
         KeyWait, %A_ThisHotkey%, d t0.250
         If (Errorlevel)
-            voicemeeter.setMainOutput(SecondOutput)
+            voicemeeter.load(profile1_file)
         Else
-            voicemeeter.setMainOutput(ThirdOutput)
+            voicemeeter.load(profile2_file)
     }
 Return
 
@@ -277,66 +269,12 @@ Class Voicemeeter {
         Else
             this.vm.strip[strip].mute--
     }
-    
-    setMainOutput(output, unmute := True) {
-        switch output {
-            case "A2": 
-                If (this.vm.strip[OUTPUT_1].A2)
-                    output := MainOutput
-            case "A3":
-                If (this.vm.strip[OUTPUT_1].A3)
-                    output := MainOutput
-            case "A4":
-                If (this.vm.strip[OUTPUT_1].A4)
-                    output := MainOutput
-            case "A5":
-                If (this.vm.strip[OUTPUT_1].A5)
-                    output := MainOutput
-        }
-        for i, strip in this.vm.strip {
-            If (i > 5) {
-                strip.A1 := 0
-                strip.A2 := 0
-                strip.A3 := 0
-                strip.A4 := 0
-                strip.A5 := 0
-                switch output {
-                    case "A1": strip.A1 := 1
-                    case "A2": strip.A2 := 1
-                    case "A3": strip.A3 := 1
-                    case "A4": strip.A4 := 1
-                    case "A5": strip.A5 := 1
-                }
-            }
-            strip.mute := 0
-        }
-
-        If (output == MainOutput) {
-            Loop, Parse, MuteStipsOnMain, `,
-            {
-                this.volumeMute(A_LoopField, 1)
-            }
-        }
-        Else If (output == SecondOutput) {
-            Loop, Parse, MuteStipsOnSecond, `,
-            {
-                this.volumeMute(A_LoopField, 1)
-            }
-        }
-        Else If (output == ThirdOutput) {
-            Loop, Parse, MuteStipsOnThird, `,
-            {
-                this.volumeMute(A_LoopField, 1)
-            }
-        }
-
-    }
 
     restart() {
         this.vm.command.restart()
     }
 
-    reset() {
-        this.vm.command.load(A_ScriptDir . "\default.xml")
+    load(file) {
+        this.vm.command.load(A_ScriptDir . "\" . file)
     }
 }
