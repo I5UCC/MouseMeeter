@@ -22,13 +22,13 @@ Loads a "default.xml" file on start and reset. Create one with the save feature 
 | Forward+LButton | Media_Prev |
 | Forward+RButton | Media_Next |
 | Forward+MButton | Media_Play_Pause |
-| F24 (bound to mouse) | switch to output A2 |
-| double F24 | switch to output A3 |
+| F24 (bound to mouse) | Load `profile1.xml` |
+| double F24 | Load `profile2.xml` |
 | Forward+F24 | AUX Mute |
 | Backward+F24 | VAIO Mute |
 | Backward+Forward+F24 | VAIO3 Mute |
 | Ctrl+Shift+R | Restart Audio Engine |
-| double Ctrl+Shift+R | Reset to Voicemeeter predefined defaults |
+| double Ctrl+Shift+R | Load `default.xml` |
 | Ctrl+Alt+F4 | Force close Active window (Something like [SuperF4](https://stefansundin.github.io/superf4/)) |
 
 Releasing Backward/Forward without triggering any of the above macros will just send Backward/Forward again
