@@ -34,6 +34,7 @@ global DeactivateOnWindow := False
 global default_file := "default.xml"
 global profile1_file := "profile1.xml"
 global profile2_file := "profile2.xml"
+global current_file := default_file
 
 Menu, Tray, DeleteAll
 Menu, Tray, NoStandard
@@ -146,10 +147,13 @@ return
 ^+R:: 
     KeyWait, R
     KeyWait, R, d t0.250
-    If (Errorlevel)
+    If (Errorlevel) {
         voicemeeter.restart()
-    Else
+    }
+    Else {
         voicemeeter.load(default_file)
+        current_file := default_file
+    }
 Return
 
 ;Mouse-HOTKEYS
@@ -239,10 +243,26 @@ F24::
     Else {
         KeyWait, %A_ThisHotkey%
         KeyWait, %A_ThisHotkey%, d t0.250
-        If (Errorlevel)
-            voicemeeter.load(profile1_file)
-        Else
-            voicemeeter.load(profile2_file)
+        If (Errorlevel) {
+            if (current_file == profile1_file) {
+                voicemeeter.load(default_file)
+                current_file := default_file
+            }
+            Else {
+                voicemeeter.load(profile1_file)
+                current_file := profile1_file
+            }
+        }
+        Else {
+            if (current_file == profile2_file) {
+                voicemeeter.load(default_file)
+                current_file := default_file
+            }
+            Else {
+                voicemeeter.load(profile2_file)
+                current_file := profile2_file
+            }
+        }
     }
 Return
 
