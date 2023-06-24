@@ -1,5 +1,5 @@
 
-# <img src="https://user-images.githubusercontent.com/43730681/171195005-6a738083-34b6-418b-a73e-24d3cc11500c.png" width="32" height="32"> Mousemeeter - Control Voicemeeter Potato with your mouse! [![Github All Releases](https://img.shields.io/github/downloads/i5ucc/Mousemeeter/total.svg)](https://github.com/I5UCC/Mousemeeter/releases/latest) <a href='https://ko-fi.com/i5ucc' target='_blank'><img height='35' style='border:0px;height:25px;' src='https://az743702.vo.msecnd.net/cdn/kofi3.png?v=0' border='0' alt='Buy Me a Coffee at ko-fi.com' />
+# <img src="https://user-images.githubusercontent.com/43730681/171195005-6a738083-34b6-418b-a73e-24d3cc11500c.png" width="32" height="32">  MouseMeeter - Control Voicemeeter Potato with your mouse! [![Github All Releases](https://img.shields.io/github/downloads/i5ucc/Mousemeeter/total.svg)](https://github.com/I5UCC/Mousemeeter/releases/latest) <a href='https://ko-fi.com/i5ucc' target='_blank'><img height='35' style='border:0px;height:25px;' src='https://az743702.vo.msecnd.net/cdn/kofi3.png?v=0' border='0' alt='Buy Me a Coffee at ko-fi.com' />
 
 A relatively simple Autohotkey script binding mouse keys to do Voicemeeter Potato commands.
 This script primarily uses the mouse side buttons to control Voicemeeter (And also some other things). 
