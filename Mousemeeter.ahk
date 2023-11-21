@@ -16,6 +16,15 @@ SetWorkingDir %A_ScriptDir%
 SendMode Input
 #Include VMR.ahk/VMR.ahk
 
+ProcessExists(name) {
+    Process, Exist, %name%
+    return ErrorLevel
+}
+
+While (!ProcessExists("voicemeeter8.exe") && !ProcessExists("voicemeeter8x64.exe"))
+    Sleep, 1000
+Sleep 5000
+
 global RunAsAdmin := True
 global TitleMatchMode := 3
 global ResetOnStartup := True
