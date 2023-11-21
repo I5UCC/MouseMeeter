@@ -1,29 +1,17 @@
-﻿;@Ahk2Exe-Let Version = 1.4
-;@Ahk2Exe-IgnoreBegin
-;@Ahk2Exe-IgnoreEnd
-;@Ahk2Exe-SetMainIcon icon.ico
-;@Ahk2Exe-SetVersion %U_Version%
-;@Ahk2Exe-SetName Mousemeeter
-;@Ahk2Exe-SetDescription Mousemeeter
-;@Ahk2Exe-Bin Unicode 64*
-;@Ahk2Exe-Obey U_au, = "%A_IsUnicode%" ? 2 : 1 ; .Bin file ANSI or Unicode?
-
-#SingleInstance Force
-#Persistent
-#NoEnv
-SetBatchLines -1
-SetWorkingDir %A_ScriptDir%
-SendMode Input
-#Include VMR.ahk/VMR.ahk
+﻿#SingleInstance Force
+Persistent
+SetWorkingDir(A_ScriptDir)
+SendMode("Input")
+#Include "VMR.ahk/VMR.ahk"
 
 ProcessExists(name) {
-    Process, Exist, %name%
+    ErrorLevel := ProcessExist(name)
     return ErrorLevel
 }
 
 While (!ProcessExists("voicemeeter8.exe") && !ProcessExists("voicemeeter8x64.exe"))
-    Sleep, 1000
-Sleep 5000
+    Sleep(1000)
+Sleep(5000)
 
 global RunAsAdmin := True
 global TitleMatchMode := 3
@@ -45,38 +33,47 @@ global profile1_file := "profile1.xml"
 global profile2_file := "profile2.xml"
 global current_file := default_file
 
-Menu, Tray, DeleteAll
-Menu, Tray, NoStandard
-Menu, Tray, UseErrorLevel, On
-Menu, Tray, Add, Reload, ReloadHandler
-Menu, Tray, Add, Refresh Config, RefreshHandler
-Menu, Tray, Add,
-Menu, Tray, Add, Open Config, OpenConfigHandler
-Menu, Tray, Add,
-Menu, Tray, Add, Exit, ExitHandler
+Tray:= A_TrayMenu
+Tray.Delete()
+Tray.Delete() ; V1toV2: not 100% replacement of NoStandard, Only if NoStandard is used at the beginning
+Tray.UseErrorLevel("On")
+Tray.Add("Reload", ReloadHandler)
+Tray.Add("Refresh Config", RefreshHandler)
+Tray.Add("")
+Tray.Add("Open Config", OpenConfigHandler)
+Tray.Add("")
+Tray.Add("Exit", ExitHandler)
 
 Start()
 Return
 
-ReloadHandler:
-    Reload
-return
+ReloadHandler(A_ThisMenuItem, A_ThisMenuItemPos, MyMenu)
+{
+    Reload()
+    return
+}
 
-RefreshHandler:
+RefreshHandler(A_ThisMenuItem, A_ThisMenuItemPos, MyMenu)
+{
     If (FileExist("config.ini"))
         ReadConfigIni()
-return
+    return
+}
 
-OpenConfigHandler:
+OpenConfigHandler(A_ThisMenuItem, A_ThisMenuItemPos, MyMenu)
+{
     If (FileExist("config.ini")) {
-        RunWait, config.ini
+        RunWait("config.ini")
         ReadConfigIni()
     }
-return
+    return
+}
 
-ExitHandler:
-    ExitApp
-return
+ExitHandler(A_ThisMenuItem, A_ThisMenuItemPos, MyMenu)
+{
+    ExitApp()
+    return
+}
 
 Start() {
     If (FileExist("config.ini"))
@@ -84,20 +81,20 @@ Start() {
 
     if (!A_IsAdmin && RunAsAdmin) {
         Try {
-	        Run *RunAs "%A_ScriptFullPath%"
+	        Run("*RunAs `"" A_ScriptFullPath "`"")
         } catch {
-            MsgBox % "Declined Elevation, if you want to start this up without Admin Rights, change 'RunAsAdmin' to 0 in config.json"
-            ExitApp
+            MsgBox("Declined Elevation, if you want to start this up without Admin Rights, change 'RunAsAdmin' to 0 in config.json")
+            ExitApp()
         }
     }
 
-    SetTitleMatchMode, %TitleMatchMode%
+    SetTitleMatchMode(TitleMatchMode)
 
     If (SetAffinity)
-        Process, Priority,, High
+        ErrorLevel := ProcessSetPriority("High")
 
     If (SetCracklingFix)
-        Run, powershell "$Process = Get-Process audiodg; $Process.ProcessorAffinity=1; $Process.PriorityClass=""High""",, Hide
+        Run("powershell `"$Process = Get-Process audiodg; $Process.ProcessorAffinity=1; $Process.PriorityClass=``"High``"`",, Hide")
 
     If (ResetOnStartup)
         voicemeeter.load(default_file)
@@ -107,55 +104,58 @@ Start() {
 
 MainLoop() {
     If (DeactivateOnWindow) {
-        Loop 
+        Loop
         {
-            Loop, Parse, DeactivateOnWindow, `n,`r 
+            Loop Parse, DeactivateOnWindow, "`n", "`r"
             {
                 if WinActive(A_LoopField) {
                     isActivated := False
-                    WinWaitNotActive % A_LoopField
+                    ErrorLevel := !WinWaitNotActive(A_LoopField)
                     isActivated := True
                 }
-                Sleep, 300
+                Sleep(300)
             }
-        Sleep, 500
+        Sleep(500)
         }
     }
 }
 
 ReadConfigIni() {
-    IniRead, SettingSectionExist, config.ini, Settings
+    SettingSectionExist := IniRead("config.ini", "Settings")
     If (SettingSectionExist) {
-        IniRead, RunAsAdmin, config.ini, Settings, RunAsAdmin
-        IniRead, TitleMatchMode, config.ini, Settings, TitleMatchMode
-        IniRead, ResetOnStartup, config.ini, Settings, ResetOnStartup
-        IniRead, SetAffinity, config.ini, Settings, SetAffinity
-        IniRead, SetCracklingFix, config.ini, Settings, SetCracklingFix
+        RunAsAdmin := IniRead("config.ini", "Settings", "RunAsAdmin")
+        TitleMatchMode := IniRead("config.ini", "Settings", "TitleMatchMode")
+        ResetOnStartup := IniRead("config.ini", "Settings", "ResetOnStartup")
+        SetAffinity := IniRead("config.ini", "Settings", "SetAffinity")
+        SetCracklingFix := IniRead("config.ini", "Settings", "SetCracklingFix")
     }
     
-    IniRead, VoicemeeterSectionExist, config.ini, VoicemeeterSettings
+    VoicemeeterSectionExist := IniRead("config.ini", "VoicemeeterSettings")
     If (VoicemeeterSectionExist) {
-        IniRead, OUTPUT_1, config.ini, VoicemeeterSettings, OUTPUT_1
-        IniRead, OUTPUT_2, config.ini, VoicemeeterSettings, OUTPUT_2
-        IniRead, OUTPUT_3, config.ini, VoicemeeterSettings, OUTPUT_3
-        IniRead, VOLUME_CHANGE_AMOUNT, config.ini, VoicemeeterSettings, VOLUME_CHANGE_AMOUNT
-        IniRead, default_file, config.ini, VoicemeeterSettings, default_file
-        IniRead, profile1_file, config.ini, VoicemeeterSettings, profile1_file
-        IniRead, profile2_file, config.ini, VoicemeeterSettings, profile2_file
+        OUTPUT_1 := IniRead("config.ini", "VoicemeeterSettings", "OUTPUT_1")
+        OUTPUT_2 := IniRead("config.ini", "VoicemeeterSettings", "OUTPUT_2")
+        OUTPUT_3 := IniRead("config.ini", "VoicemeeterSettings", "OUTPUT_3")
+        VOLUME_CHANGE_AMOUNT := IniRead("config.ini", "VoicemeeterSettings", "VOLUME_CHANGE_AMOUNT")
+        default_file := IniRead("config.ini", "VoicemeeterSettings", "default_file")
+        profile1_file := IniRead("config.ini", "VoicemeeterSettings", "profile1_file")
+        profile2_file := IniRead("config.ini", "VoicemeeterSettings", "profile2_file")
     }
     
-    IniRead, DeactivateOnWindow, config.ini, DeactivateOnWindow
+    DeactivateOnWindow := IniRead("config.ini", "DeactivateOnWindow")
 }
 
 ;KB-HOTKEYS
 ^!F4::
-    WinGet, active_id, PID, A
-    run, taskkill /PID %active_id% /F,,Hide
-return
+{
+    active_id := WinGetPID("A")
+    Run("taskkill /PID " active_id " /F", , "Hide")
+    return
+}
 
 ^+R:: 
-    KeyWait, R
-    KeyWait, R, d t0.250
+{
+    ErrorLevel := !KeyWait("R")
+    ErrorLevel := !KeyWait("R", "d t0.250")
     If (Errorlevel) {
         voicemeeter.restart()
     }
@@ -163,86 +163,106 @@ return
         voicemeeter.load(default_file)
         current_file := default_file
     }
-Return
+    return
+}
 
 ;Mouse-HOTKEYS
-#If isActivated
+#HotIf isActivated
 XButton1::
+{
     While GetKeyState("XButton1", "P") {
         HotkeyState := True
-        Sleep 200
+        Sleep(200)
     }
     HotkeyState := False
-Return
+    return
+}
 
 XButton2::
+{
     While GetKeyState("XButton2", "P") {
         HotkeyState := True
-        Sleep 200
+        Sleep(200)
     }
     HotkeyState := False
-Return
+    return
+}
 
 XButton1 Up::
+{
     HotkeyState := False
     If (A_PriorHotkey == "XButton1")
-        Send, {XButton1}
-Return
+        Send("{XButton1}")
+    return
+}
 
 XButton2 Up::
+{
     HotkeyState := False
     If (A_PriorHotkey == "XButton2")
-        Send, {XButton2}
-Return
+        Send("{XButton2}")
+    return
+}
 
-#If isActivated && HotkeyState
+#HotIf isActivated && HotkeyState
 LButton::
+{
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
-        Send, {LButton}
+        Send("{LButton}")
     Else If (GetKeyState("XButton1","P"))
-        Send, {LButton}
+        Send("{LButton}")
     Else If (GetKeyState("XButton2","P"))
-        Send, {Media_Prev}
-Return
+        Send("{Media_Prev}")
+    return
+}
 
 RButton::
+{
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
-        Send, {RButton}
+        Send("{RButton}")
     Else If (GetKeyState("XButton1","P"))
-        Send, {RButton}
+        Send("{RButton}")
     Else If (GetKeyState("XButton2","P"))
-        Send, {Media_Next}
-Return
+        Send("{Media_Next}")
+    return
+}
 
 MButton::
+{
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P"))
-        Send, {MButton}
+        Send("{MButton}")
     Else If (GetKeyState("XButton1","P"))
-        Send, {MButton}
+        Send("{MButton}")
     Else If (GetKeyState("XButton2","P"))
-        Send, {Media_Play_Pause}
-Return
+        Send("{Media_Play_Pause}")
+    return
+}
 
 WheelUp::
+{
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VAIO3
         voicemeeter.volumeUp(OUTPUT_3)
     Else If (GetKeyState("XButton1","P")) ;VAIO
         voicemeeter.volumeUp(OUTPUT_1)
     Else If (GetKeyState("XButton2","P")) ;AUX
         voicemeeter.volumeUp(OUTPUT_2)
-Return
+    return
+}
 
 WheelDown::
+{
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VAIO3
         voicemeeter.volumeDown(OUTPUT_3)
     Else If (GetKeyState("XButton1","P")) ;VAIO
         voicemeeter.volumeDown(OUTPUT_1)
     Else If (GetKeyState("XButton2","P")) ;AUX
         voicemeeter.volumeDown(OUTPUT_2)
-Return
+    return
+}
 
-#If
+#HotIf
 F24::
+{
     If (GetKeyState("XButton1","P") && GetKeyState("XButton2","P")) ;VAIO3
         voicemeeter.volumeMute(OUTPUT_3)
     Else If (GetKeyState("XButton1","P")) ;VAIO
@@ -250,8 +270,8 @@ F24::
     Else If (GetKeyState("XButton2","P")) ;AUX
         voicemeeter.volumeMute(OUTPUT_2)
     Else {
-        KeyWait, %A_ThisHotkey%
-        KeyWait, %A_ThisHotkey%, d t0.250
+        ErrorLevel := !KeyWait(A_ThisHotkey)
+        ErrorLevel := !KeyWait(A_ThisHotkey, "d t0.250")
         If (Errorlevel) {
             if (current_file == profile1_file) {
                 voicemeeter.load(default_file)
@@ -273,7 +293,8 @@ F24::
             }
         }
     }
-Return
+    return
+}
 
 ;Classes
 Class Voicemeeter {
@@ -292,7 +313,7 @@ Class Voicemeeter {
         this.vm.strip[strip].gain -= VOLUME_CHANGE_AMOUNT
     }
 
-    volumeMute(strip, v = -1) {
+    volumeMute(strip, v := -1) {
         if (v != -1)
             this.vm.strip[strip].mute := v
         Else
