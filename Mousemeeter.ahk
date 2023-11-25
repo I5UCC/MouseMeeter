@@ -2,7 +2,7 @@
 Persistent
 SetWorkingDir(A_ScriptDir)
 SendMode("Input")
-#Include "VMR.ahk/VMR.ahk"
+#Include "VMR.ahk"
 
 ProcessExists(name) {
     ErrorLevel := ProcessExist(name)
