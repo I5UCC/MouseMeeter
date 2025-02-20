@@ -221,7 +221,6 @@ WheelDown::
 ;#ENDREGION
 
 ;#REGION: Keyboard-HOTKEYS
-PgUp & PgDn::
 F24::
 {
     global default_file, profile1_file, profile2_file, OUTPUT_1, OUTPUT_2, OUTPUT_3
@@ -256,42 +255,36 @@ F24::
 }
 
 Volume_Up::
-^PgUp::
 {
     global OUTPUT_1
     volumeUp(OUTPUT_1)
 }
 
 Volume_Down::
-^PgDn::
 {
     global OUTPUT_1
     volumeDown(OUTPUT_1)
 }
 
 +Volume_Up::
-+PgUp::
 {
     global OUTPUT_2
     volumeUp(OUTPUT_2)
 }
 
 +Volume_Down::
-+PgDn::
 {
     global OUTPUT_2
     volumeDown(OUTPUT_2)
 }
 
 ^+Volume_Up::
-^+PgUp::
 {
     global OUTPUT_3
     volumeUp(OUTPUT_3)
 }
 
 ^+Volume_Down::
-^+PgDn::
 {
     global OUTPUT_3
     volumeDown(OUTPUT_3)
