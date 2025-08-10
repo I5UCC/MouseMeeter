@@ -43,6 +43,9 @@ public static class WinAPI
     [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     public static extern IntPtr GetModuleHandle(string lpModuleName);
 
+    [DllImport("user32.dll")]
+    public static extern void keybd_event(byte virtualKey, byte scanCode, uint flags, IntPtr extraInfo);
+
     public delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
 
     public const int WH_MOUSE_LL = 14;
@@ -75,9 +78,6 @@ public static class WinAPI
     public const int VK_MEDIA_NEXT_TRACK = 0xB0;
     public const int VK_MEDIA_PLAY_PAUSE = 0xB3;
     public const int VK_MEDIA_PREV_TRACK = 0xB1;
-
-    [DllImport("user32.dll")]
-    public static extern void keybd_event(byte virtualKey, byte scanCode, uint flags, IntPtr extraInfo);
 
     [StructLayout(LayoutKind.Sequential)]
     public struct POINT

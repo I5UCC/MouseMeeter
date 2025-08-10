@@ -18,6 +18,8 @@ public class MouseStateTracker
     public bool XButton2Pressed => xButton2Pressed;
     public bool HotkeyState => xButton1Pressed || xButton2Pressed;
 
+    public bool WasVolumeControlUsed => wasVolumeControlUsed;
+
     public void QueueEvent(MouseEvent mouseEvent)
     {
         lock (queueLock)
@@ -92,4 +94,16 @@ public class MouseStateTracker
     {
         wasVolumeControlUsed = true;
     }
+}
+
+public struct MouseEvent
+{
+    public enum EventType
+    {
+        XButton1Down, XButton1Up, XButton2Down, XButton2Up,
+        WheelUp, WheelDown,
+        LeftDown, RightDown, MiddleDown
+    }
+    public EventType Type;
+    public DateTime Timestamp;
 }

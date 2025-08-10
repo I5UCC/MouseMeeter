@@ -377,3 +377,11 @@ public class VoicemeeterController
         }
     }
 }
+
+public struct VolumeAction
+{
+    public enum ActionType { VolumeUp, VolumeDown, Mute, MediaNext, MediaPrev, MediaPlayPause }
+    public ActionType Type;
+    public int Strip;
+    public DateTime Timestamp;
+}
