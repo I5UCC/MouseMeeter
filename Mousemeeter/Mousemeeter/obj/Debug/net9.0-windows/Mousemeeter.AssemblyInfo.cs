@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Mousemeeter")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cde6c62df8606b989ea5e6cce56220415001292d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6787ab89752858e2b7ed37775fdacdb681016952")]
 [assembly: System.Reflection.AssemblyProductAttribute("Mousemeeter")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Mousemeeter")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

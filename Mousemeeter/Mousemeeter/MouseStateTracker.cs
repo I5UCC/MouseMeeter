@@ -65,12 +65,13 @@ public class MouseStateTracker
 
             case MouseEvent.EventType.WheelUp:
             case MouseEvent.EventType.WheelDown:
+                // Mouse wheel is only captured when hotkey state is active
                 if (HotkeyState)
                 {
                     wasVolumeControlUsed = true;
-                    return true; // Block wheel when controlling volume
+                    return true; // Block wheel events when used for volume control
                 }
-                return false;
+                return false; // Don't block when no hotkey is pressed
 
             case MouseEvent.EventType.LeftDown:
             case MouseEvent.EventType.RightDown:

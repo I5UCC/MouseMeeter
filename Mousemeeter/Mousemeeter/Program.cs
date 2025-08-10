@@ -189,6 +189,7 @@ namespace Mousemeeter
                     var hookStruct = Marshal.PtrToStructure<WinAPI.MSLLHOOKSTRUCT>(lParam);
                     MouseEvent mouseEvent = new MouseEvent { Timestamp = DateTime.Now };
                     bool queueEvent = false;
+                    bool blockInput = false;
 
                     switch ((int)wParam)
                     {
@@ -198,11 +199,13 @@ namespace Mousemeeter
                             {
                                 mouseEvent.Type = MouseEvent.EventType.XButton1Down;
                                 queueEvent = true;
+                                blockInput = true; // Always block XButton1 down initially
                             }
                             else if (downButton == 2)
                             {
                                 mouseEvent.Type = MouseEvent.EventType.XButton2Down;
                                 queueEvent = true;
+                                blockInput = true; // Always block XButton2 down initially
                             }
                             break;
 
@@ -212,21 +215,26 @@ namespace Mousemeeter
                             {
                                 mouseEvent.Type = MouseEvent.EventType.XButton1Up;
                                 queueEvent = true;
+                                blockInput = true; // Always block XButton1 up (we'll handle sending it manually if needed)
                             }
                             else if (upButton == 2)
                             {
                                 mouseEvent.Type = MouseEvent.EventType.XButton2Up;
                                 queueEvent = true;
+                                blockInput = true; // Always block XButton2 up (we'll handle sending it manually if needed)
                             }
                             break;
 
                         case WinAPI.WM_MOUSEWHEEL:
+                            // Only block mouse wheel when XButton1 or XButton2 is pressed
                             if (mouseStateTracker.HotkeyState)
                             {
                                 int delta = unchecked((short)((uint)hookStruct.mouseData >> 16));
                                 mouseEvent.Type = delta > 0 ? MouseEvent.EventType.WheelUp : MouseEvent.EventType.WheelDown;
                                 queueEvent = true;
+                                blockInput = true; // Block mouse wheel only when hotkey is active
                             }
+                            // If no hotkey is pressed, let the wheel event pass through normally
                             break;
 
                         case WinAPI.WM_LBUTTONDOWN:
@@ -234,6 +242,7 @@ namespace Mousemeeter
                             {
                                 mouseEvent.Type = MouseEvent.EventType.LeftDown;
                                 queueEvent = true;
+                                blockInput = true; // Block when hotkey is active
                             }
                             break;
 
@@ -242,6 +251,7 @@ namespace Mousemeeter
                             {
                                 mouseEvent.Type = MouseEvent.EventType.RightDown;
                                 queueEvent = true;
+                                blockInput = true; // Block when hotkey is active
                             }
                             break;
 
@@ -250,6 +260,7 @@ namespace Mousemeeter
                             {
                                 mouseEvent.Type = MouseEvent.EventType.MiddleDown;
                                 queueEvent = true;
+                                blockInput = true; // Block when hotkey is active
                             }
                             break;
                     }
@@ -257,17 +268,12 @@ namespace Mousemeeter
                     if (queueEvent)
                     {
                         mouseStateTracker.QueueEvent(mouseEvent);
+                    }
 
-                        // Quick check for blocking - no complex logic here
-                        if (mouseEvent.Type == MouseEvent.EventType.WheelUp ||
-                            mouseEvent.Type == MouseEvent.EventType.WheelDown ||
-                            (mouseStateTracker.HotkeyState &&
-                             (mouseEvent.Type == MouseEvent.EventType.LeftDown ||
-                              mouseEvent.Type == MouseEvent.EventType.RightDown ||
-                              mouseEvent.Type == MouseEvent.EventType.MiddleDown)))
-                        {
-                            return (IntPtr)1; // Block immediately for volume/media controls
-                        }
+                    // Block the input if needed
+                    if (blockInput)
+                    {
+                        return (IntPtr)1; // Block the input from reaching Windows
                     }
                 }
                 catch
@@ -298,6 +304,18 @@ namespace Mousemeeter
             {
                 bool shouldBlock = mouseStateTracker.ProcessEvent(mouseEvent);
 
+                // Handle XButton releases - send original key if volume control wasn't used
+                if (mouseEvent.Type == MouseEvent.EventType.XButton1Up && !shouldBlock)
+                {
+                    // Send XButton1 navigation event (browser back)
+                    SendXButtonEvent(1);
+                }
+                else if (mouseEvent.Type == MouseEvent.EventType.XButton2Up && !shouldBlock)
+                {
+                    // Send XButton2 navigation event (browser forward)
+                    SendXButtonEvent(2);
+                }
+
                 // Process volume/media actions
                 switch (mouseEvent.Type)
                 {
@@ -306,6 +324,7 @@ namespace Mousemeeter
                         {
                             ProcessVolumeUp();
                         }
+                        // Note: Mouse wheel is only blocked when XButton1 or XButton2 is pressed
                         break;
 
                     case MouseEvent.EventType.WheelDown:
@@ -313,6 +332,7 @@ namespace Mousemeeter
                         {
                             ProcessVolumeDown();
                         }
+                        // Note: Mouse wheel is only blocked when XButton1 or XButton2 is pressed
                         break;
 
                     case MouseEvent.EventType.LeftDown:
@@ -527,6 +547,26 @@ namespace Mousemeeter
                 trayIcon?.Dispose();
             }
             base.Dispose(disposing);
+        }
+
+        private void SendXButtonEvent(int buttonNumber)
+        {
+            try
+            {
+                // Send the XButton key down and up events to simulate the original behavior
+                byte vKey = buttonNumber == 1 ? (byte)WinAPI.VK_XBUTTON1 : (byte)WinAPI.VK_XBUTTON2;
+                
+                // Key down
+                WinAPI.keybd_event(vKey, 0, 0, IntPtr.Zero);
+                // Key up
+                WinAPI.keybd_event(vKey, 0, WinAPI.KEYEVENTF_KEYUP, IntPtr.Zero);
+                
+                Console.WriteLine($"Sent XButton{buttonNumber} navigation event");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send XButton{buttonNumber} event: {ex.Message}");
+            }
         }
     }
 
