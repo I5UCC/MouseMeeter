@@ -33,14 +33,13 @@ public sealed partial class MousemeeterApp : Form
         WindowState = FormWindowState.Minimized;
         ShowInTaskbar = false;
         Visible = false;
-        FormBorderStyle = FormBorderStyle.FixedToolWindow;
-        StartPosition = FormStartPosition.CenterScreen;
     }
 
     private async void InitializeApplicationAsync()
     {
         try
         {
+            SetupTrayIcon();
             _config.LoadConfig();
 
             await WaitForVoicemeeterAsync();
@@ -54,7 +53,6 @@ public sealed partial class MousemeeterApp : Form
                 _config.CurrentFile = _config.DefaultFile;
             }
 
-            SetupTrayIcon();
             SetupInputTimer();
             SetupMouseHook();
 

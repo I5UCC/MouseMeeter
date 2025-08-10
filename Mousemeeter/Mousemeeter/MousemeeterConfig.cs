@@ -15,9 +15,9 @@ public class MousemeeterConfig
     public bool SetAffinity { get; set; } = true;
     public bool SetCracklingFix { get; set; } = true;
 
-    public int Output1 { get; set; } = 6;
-    public int Output2 { get; set; } = 7;
-    public int Output3 { get; set; } = 8;
+    public int Output1 { get; set; } = 5;
+    public int Output2 { get; set; } = 6;
+    public int Output3 { get; set; } = 7;
     public float VolumeChangeAmount { get; set; } = 0.5f;
 
     public string DefaultFile { get; set; } = "default.xml";
