@@ -4,7 +4,7 @@ using Timer = System.Windows.Forms.Timer;
 
 namespace Mousemeeter;
 
-public sealed partial class MousemeeterApp : Form
+public sealed partial class MousemeeterApp : IDisposable
 {
     private readonly MousemeeterConfig _config = new();
     private readonly MouseStateTracker _mouseStateTracker = new();
@@ -24,15 +24,7 @@ public sealed partial class MousemeeterApp : Form
 
     public MousemeeterApp()
     {
-        InitializeComponent();
         InitializeApplicationAsync();
-    }
-
-    private void InitializeComponent()
-    {
-        WindowState = FormWindowState.Minimized;
-        ShowInTaskbar = false;
-        Visible = false;
     }
 
     private async void InitializeApplicationAsync()
@@ -43,7 +35,7 @@ public sealed partial class MousemeeterApp : Form
             _config.LoadConfig();
 
             await WaitForVoicemeeterAsync();
-            
+
             _vmController = new VoicemeeterController(_config);
             SetupSystemOptimizations();
 
@@ -434,11 +426,6 @@ public sealed partial class MousemeeterApp : Form
         return keys.All(key => (WinAPI.GetAsyncKeyState(key) & 0x8000) != 0);
     }
 
-    protected override void WndProc(ref Message m)
-    {
-        base.WndProc(ref m);
-    }
-
     private static void ForceKillActiveWindow()
     {
         try
@@ -488,7 +475,7 @@ public sealed partial class MousemeeterApp : Form
     private void ExitApplication()
     {
         if (_isDisposed) return;
-        
+
         _isDisposed = true;
         _inputTimer?.Stop();
 
@@ -503,9 +490,9 @@ public sealed partial class MousemeeterApp : Form
         Application.Exit();
     }
 
-    protected override void Dispose(bool disposing)
+    public void Dispose()
     {
-        if (disposing && !_isDisposed)
+        if (!_isDisposed)
         {
             _isDisposed = true;
             _inputTimer?.Dispose();
@@ -519,7 +506,6 @@ public sealed partial class MousemeeterApp : Form
             _vmController?.Disconnect();
             _trayIcon?.Dispose();
         }
-        base.Dispose(disposing);
     }
 }
 
@@ -530,6 +516,8 @@ public static class Program
     {
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        Application.Run(new MousemeeterApp());
+
+        using var app = new MousemeeterApp();
+        Application.Run();
     }
 }
