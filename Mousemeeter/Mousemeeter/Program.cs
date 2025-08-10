@@ -1,91 +1,124 @@
 using System.Diagnostics;
-using System.Globalization;
 using System.Runtime.InteropServices;
 using Timer = System.Windows.Forms.Timer;
 
 namespace Mousemeeter;
 
-public partial class MousemeeterApp : Form
+public sealed partial class MousemeeterApp : Form
 {
-    private MousemeeterConfig config;
-    private VoicemeeterController vmController;
-    private NotifyIcon trayIcon;
-    private bool isActivated = true;
-    private DateTime lastF24Press = DateTime.MinValue;
-    private Timer inputTimer;
-    private IntPtr mouseHookId = IntPtr.Zero;
-    private WinAPI.LowLevelMouseProc mouseHookProc;
-    private MouseStateTracker mouseStateTracker = new MouseStateTracker();
+    private readonly MousemeeterConfig _config = new();
+    private readonly MouseStateTracker _mouseStateTracker = new();
+    
+    private VoicemeeterController? _vmController;
+    private NotifyIcon? _trayIcon;
+    private Timer? _inputTimer;
+    private IntPtr _mouseHookId = IntPtr.Zero;
+    private WinAPI.LowLevelMouseProc? _mouseHookProc;
+    
+    private volatile bool _isActivated = true;
+    private volatile bool _isDisposed = false;
+    
+    private readonly Stopwatch _f24PressStopwatch = Stopwatch.StartNew();
+    private const int DoubleClickThresholdMs = 250;
+    private const int GlobalHotkeyDelayMs = 100;
 
     public MousemeeterApp()
     {
         InitializeComponent();
-        InitializeApplication();
+        InitializeApplicationAsync();
     }
 
     private void InitializeComponent()
     {
-        this.WindowState = FormWindowState.Minimized;
-        this.ShowInTaskbar = false;
-        this.Visible = false;
+        WindowState = FormWindowState.Minimized;
+        ShowInTaskbar = false;
+        Visible = false;
+        FormBorderStyle = FormBorderStyle.FixedToolWindow;
+        StartPosition = FormStartPosition.CenterScreen;
     }
 
-    private void InitializeApplication()
+    private async void InitializeApplicationAsync()
     {
-        config = new MousemeeterConfig();
-        config.LoadConfig();
-
-        WaitForVoicemeeter();
-        vmController = new VoicemeeterController(config);
-        SetupSystemOptimizations();
-
-        if (config.ResetOnStartup)
+        try
         {
-            vmController.LoadProfile(config.DefaultFile);
-            config.CurrentFile = config.DefaultFile;
-        }
+            _config.LoadConfig();
 
-        SetupTrayIcon();
-        SetupInputTimer();
-        SetupMouseHook();
+            await WaitForVoicemeeterAsync();
+            
+            _vmController = new VoicemeeterController(_config);
+            SetupSystemOptimizations();
 
-        Console.WriteLine("Mousemeeter started successfully");
-    }
-
-    private void WaitForVoicemeeter()
-    {
-        string[] vmProcessNames = { "voicemeeter8", "voicemeeter8x64", "voicemeeter" };
-
-        Console.WriteLine("Waiting for Voicemeeter to start...");
-        bool found = false;
-
-        while (!found)
-        {
-            foreach (string processName in vmProcessNames)
+            if (_config.ResetOnStartup)
             {
-                Process[] processes = Process.GetProcessesByName(processName);
-                if (processes.Length > 0)
-                {
-                    Console.WriteLine($"Found Voicemeeter process: {processName}");
-                    found = true;
-                    break;
-                }
+                _vmController.LoadProfile(_config.DefaultFile);
+                _config.CurrentFile = _config.DefaultFile;
             }
 
-            if (!found)
-                Thread.Sleep(1000);
-        }
+            SetupTrayIcon();
+            SetupInputTimer();
+            SetupMouseHook();
 
-        Thread.Sleep(5000);
+            Console.WriteLine("Mousemeeter started successfully");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to initialize application: {ex.Message}");
+            ExitApplication();
+        }
+    }
+
+    private static async Task WaitForVoicemeeterAsync()
+    {
+        // Use array instead of ReadOnlySpan for async methods
+        string[] vmProcessNames = ["voicemeeter8", "voicemeeter8x64", "voicemeeter"];
+
+        Console.WriteLine("Waiting for Voicemeeter to start...");
+
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(5)); // 5-minute timeout
+        
+        try
+        {
+            while (!cancellationTokenSource.Token.IsCancellationRequested)
+            {
+                foreach (var processName in vmProcessNames)
+                {
+                    var processes = Process.GetProcessesByName(processName);
+                    try
+                    {
+                        if (processes.Length > 0)
+                        {
+                            Console.WriteLine($"Found Voicemeeter process: {processName}");
+                            await Task.Delay(5000, cancellationTokenSource.Token); // Startup delay
+                            return;
+                        }
+                    }
+                    finally
+                    {
+                        // Properly dispose all processes
+                        foreach (var process in processes)
+                        {
+                            process?.Dispose();
+                        }
+                    }
+                }
+
+                await Task.Delay(1000, cancellationTokenSource.Token);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw new TimeoutException("Voicemeeter did not start within the expected time.");
+        }
     }
 
     private void SetupSystemOptimizations()
     {
-        if (config.SetAffinity)
+        if (_config.SetAffinity)
         {
             try
             {
-                Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
+                using var currentProcess = Process.GetCurrentProcess();
+                currentProcess.PriorityClass = ProcessPriorityClass.High;
                 Console.WriteLine("Set high process priority");
             }
             catch (Exception ex)
@@ -94,18 +127,19 @@ public partial class MousemeeterApp : Form
             }
         }
 
-        if (config.SetCracklingFix)
+        if (_config.SetCracklingFix)
         {
             try
             {
-                var processStartInfo = new ProcessStartInfo
+                using var process = Process.Start(new ProcessStartInfo
                 {
                     FileName = "powershell",
-                    Arguments = "$Process = Get-Process audiodg; $Process.ProcessorAffinity=1; $Process.PriorityClass=\"High\"",
+                    Arguments = "$Process = Get-Process audiodg -ErrorAction SilentlyContinue; if($Process) { $Process.ProcessorAffinity=1; $Process.PriorityClass='High' }",
                     WindowStyle = ProcessWindowStyle.Hidden,
-                    CreateNoWindow = true
-                };
-                Process.Start(processStartInfo);
+                    CreateNoWindow = true,
+                    UseShellExecute = false
+                });
+                
                 Console.WriteLine("Applied crackling fix");
             }
             catch (Exception ex)
@@ -117,37 +151,48 @@ public partial class MousemeeterApp : Form
 
     private void SetupTrayIcon()
     {
-        trayIcon = new NotifyIcon();
-        trayIcon.Icon = new Icon("icon.ico");
-        trayIcon.Text = "Mousemeeter";
-        trayIcon.Visible = true;
+        _trayIcon = new NotifyIcon
+        {
+            Icon = new Icon("icon.ico"),
+            Text = "Mousemeeter",
+            Visible = true
+        };
 
         var contextMenu = new ContextMenuStrip();
-        contextMenu.Items.Add("Reload", null, (s, e) => ReloadApplication());
-        contextMenu.Items.Add("Refresh Config", null, (s, e) => RefreshConfig());
-        contextMenu.Items.Add("-");
-        contextMenu.Items.Add("Open Config", null, (s, e) => OpenConfig());
-        contextMenu.Items.Add("-");
-        contextMenu.Items.Add("Exit", null, (s, e) => ExitApplication());
+        contextMenu.Items.AddRange([
+            new ToolStripMenuItem("Reload", null, (_, _) => ReloadApplication()),
+            new ToolStripMenuItem("Refresh Config", null, (_, _) => RefreshConfig()),
+            new ToolStripSeparator(),
+            new ToolStripMenuItem("Open Config", null, (_, _) => OpenConfig()),
+            new ToolStripSeparator(),
+            new ToolStripMenuItem("Exit", null, (_, _) => ExitApplication())
+        ]);
 
-        trayIcon.ContextMenuStrip = contextMenu;
+        _trayIcon.ContextMenuStrip = contextMenu;
     }
 
     private void SetupInputTimer()
     {
-        inputTimer = new Timer();
-        inputTimer.Interval = 50;
-        inputTimer.Tick += InputTimer_Tick;
-        inputTimer.Start();
+        _inputTimer = new Timer
+        {
+            Interval = 50
+        };
+        _inputTimer.Tick += InputTimer_Tick;
+        _inputTimer.Start();
     }
 
     private void SetupMouseHook()
     {
-        mouseHookProc = MouseHookCallback;
-        mouseHookId = WinAPI.SetWindowsHookEx(WinAPI.WH_MOUSE_LL, mouseHookProc,
-            WinAPI.GetModuleHandle(Process.GetCurrentProcess().MainModule.ModuleName), 0);
+        _mouseHookProc = MouseHookCallback;
+        using var currentProcess = Process.GetCurrentProcess();
+        
+        _mouseHookId = WinAPI.SetWindowsHookEx(
+            WinAPI.WH_MOUSE_LL, 
+            _mouseHookProc,
+            WinAPI.GetModuleHandle(currentProcess.MainModule?.ModuleName), 
+            0);
 
-        if (mouseHookId == IntPtr.Zero)
+        if (_mouseHookId == IntPtr.Zero)
         {
             Console.WriteLine("Failed to install mouse hook");
         }
@@ -159,168 +204,129 @@ public partial class MousemeeterApp : Form
 
     private IntPtr MouseHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0 && isActivated)
+        if (nCode < 0 || !_isActivated || _isDisposed)
         {
-            try
-            {
-                var hookStruct = Marshal.PtrToStructure<WinAPI.MSLLHOOKSTRUCT>(lParam);
-                MouseEvent mouseEvent = new MouseEvent { Timestamp = DateTime.Now };
-                bool queueEvent = false;
-                bool blockInput = false;
-
-                switch ((int)wParam)
-                {
-                    case WinAPI.WM_XBUTTONDOWN:
-                        int downButton = unchecked((int)((uint)hookStruct.mouseData >> 16));
-                        if (downButton == 1)
-                        {
-                            mouseEvent.Type = MouseEvent.EventType.XButton1Down;
-                            queueEvent = true;
-                            blockInput = true;
-                        }
-                        else if (downButton == 2)
-                        {
-                            mouseEvent.Type = MouseEvent.EventType.XButton2Down;
-                            queueEvent = true;
-                            blockInput = true;
-                        }
-                        break;
-
-                    case WinAPI.WM_XBUTTONUP:
-                        int upButton = unchecked((int)((uint)hookStruct.mouseData >> 16));
-                        if (upButton == 1)
-                        {
-                            mouseEvent.Type = MouseEvent.EventType.XButton1Up;
-                            queueEvent = true;
-                            blockInput = mouseStateTracker.WasVolumeControlUsed;
-                        }
-                        else if (upButton == 2)
-                        {
-                            mouseEvent.Type = MouseEvent.EventType.XButton2Up;
-                            queueEvent = true;
-                            blockInput = mouseStateTracker.WasVolumeControlUsed;
-                        }
-                        break;
-
-                    case WinAPI.WM_MOUSEWHEEL:
-                        if (mouseStateTracker.HotkeyState)
-                        {
-                            int delta = unchecked((short)((uint)hookStruct.mouseData >> 16));
-                            mouseEvent.Type = delta > 0 ? MouseEvent.EventType.WheelUp : MouseEvent.EventType.WheelDown;
-                            queueEvent = true;
-                            blockInput = true;
-                        }
-                        break;
-
-                    case WinAPI.WM_LBUTTONDOWN:
-                        if (mouseStateTracker.HotkeyState)
-                        {
-                            mouseEvent.Type = MouseEvent.EventType.LeftDown;
-                            queueEvent = true;
-                            blockInput = true;
-                        }
-                        break;
-
-                    case WinAPI.WM_RBUTTONDOWN:
-                        if (mouseStateTracker.HotkeyState)
-                        {
-                            mouseEvent.Type = MouseEvent.EventType.RightDown;
-                            queueEvent = true;
-                            blockInput = true;
-                        }
-                        break;
-
-                    case WinAPI.WM_RBUTTONUP:
-                        if (mouseStateTracker.HotkeyState)
-                        {
-                            blockInput = true;
-                        }
-                        break;
-
-                    case WinAPI.WM_MBUTTONDOWN:
-                        if (mouseStateTracker.HotkeyState)
-                        {
-                            mouseEvent.Type = MouseEvent.EventType.MiddleDown;
-                            queueEvent = true;
-                            blockInput = true;
-                        }
-                        break;
-
-                    default:
-                        return WinAPI.CallNextHookEx(mouseHookId, nCode, wParam, lParam);
-                }
-
-                if (queueEvent)
-                {
-                    mouseStateTracker.QueueEvent(mouseEvent);
-                }
-
-                if (blockInput)
-                {
-                    return (IntPtr)1;
-                }
-            }
-            catch
-            {
-                // Ignore all exceptions in hook to prevent blocking
-            }
+            return WinAPI.CallNextHookEx(_mouseHookId, nCode, wParam, lParam);
         }
 
-        return WinAPI.CallNextHookEx(mouseHookId, nCode, wParam, lParam);
+        try
+        {
+            var hookStruct = Marshal.PtrToStructure<WinAPI.MSLLHOOKSTRUCT>(lParam);
+            var mouseEvent = new MouseEvent { Timestamp = DateTime.Now };
+            var shouldQueue = false;
+            var shouldBlock = false;
+
+            var eventResult = (int)wParam switch
+            {
+                WinAPI.WM_XBUTTONDOWN => ProcessXButtonDown(hookStruct.mouseData, ref mouseEvent, ref shouldQueue, ref shouldBlock),
+                WinAPI.WM_XBUTTONUP => ProcessXButtonUp(hookStruct.mouseData, ref mouseEvent, ref shouldQueue, ref shouldBlock),
+                WinAPI.WM_MOUSEWHEEL when _mouseStateTracker.HotkeyState => ProcessMouseWheel(hookStruct.mouseData, ref mouseEvent, ref shouldQueue, ref shouldBlock),
+                WinAPI.WM_LBUTTONDOWN when _mouseStateTracker.HotkeyState => ProcessButtonDown(MouseEvent.EventType.LeftDown, ref mouseEvent, ref shouldQueue, ref shouldBlock),
+                WinAPI.WM_RBUTTONDOWN when _mouseStateTracker.HotkeyState => ProcessButtonDown(MouseEvent.EventType.RightDown, ref mouseEvent, ref shouldQueue, ref shouldBlock),
+                WinAPI.WM_RBUTTONUP when _mouseStateTracker.HotkeyState => (false, true),
+                WinAPI.WM_MBUTTONDOWN when _mouseStateTracker.HotkeyState => ProcessButtonDown(MouseEvent.EventType.MiddleDown, ref mouseEvent, ref shouldQueue, ref shouldBlock),
+                _ => (false, false)
+            };
+
+            shouldQueue = eventResult.Item1;
+            shouldBlock = eventResult.Item2;
+
+            if (shouldQueue)
+            {
+                _mouseStateTracker.QueueEvent(mouseEvent);
+            }
+
+            return shouldBlock ? (IntPtr)1 : WinAPI.CallNextHookEx(_mouseHookId, nCode, wParam, lParam);
+        }
+        catch
+        {
+            return WinAPI.CallNextHookEx(_mouseHookId, nCode, wParam, lParam);
+        }
     }
 
-    private void InputTimer_Tick(object sender, EventArgs e)
+    private static (bool shouldQueue, bool shouldBlock) ProcessXButtonDown(uint mouseData, ref MouseEvent mouseEvent, ref bool shouldQueue, ref bool shouldBlock)
     {
-        if (!isActivated) return;
+        var button = unchecked((int)(mouseData >> 16));
+        if (button == 1)
+        {
+            mouseEvent.Type = MouseEvent.EventType.XButton1Down;
+            return (true, true);
+        }
+        if (button == 2)
+        {
+            mouseEvent.Type = MouseEvent.EventType.XButton2Down;
+            return (true, true);
+        }
+        return (false, false);
+    }
+
+    private (bool shouldQueue, bool shouldBlock) ProcessXButtonUp(uint mouseData, ref MouseEvent mouseEvent, ref bool shouldQueue, ref bool shouldBlock)
+    {
+        var button = unchecked((int)(mouseData >> 16));
+        if (button == 1)
+        {
+            mouseEvent.Type = MouseEvent.EventType.XButton1Up;
+            return (true, _mouseStateTracker.WasVolumeControlUsed);
+        }
+        if (button == 2)
+        {
+            mouseEvent.Type = MouseEvent.EventType.XButton2Up;
+            return (true, _mouseStateTracker.WasVolumeControlUsed);
+        }
+        return (false, false);
+    }
+
+    private static (bool shouldQueue, bool shouldBlock) ProcessMouseWheel(uint mouseData, ref MouseEvent mouseEvent, ref bool shouldQueue, ref bool shouldBlock)
+    {
+        var delta = unchecked((short)(mouseData >> 16));
+        mouseEvent.Type = delta > 0 ? MouseEvent.EventType.WheelUp : MouseEvent.EventType.WheelDown;
+        return (true, true);
+    }
+
+    private static (bool shouldQueue, bool shouldBlock) ProcessButtonDown(MouseEvent.EventType eventType, ref MouseEvent mouseEvent, ref bool shouldQueue, ref bool shouldBlock)
+    {
+        mouseEvent.Type = eventType;
+        return (true, true);
+    }
+
+    private void InputTimer_Tick(object? sender, EventArgs e)
+    {
+        if (!_isActivated || _isDisposed) return;
 
         ProcessMouseEvents();
-
         HandleGlobalHotkeys();
     }
 
     private void ProcessMouseEvents()
     {
-        var events = mouseStateTracker.DequeueEvents();
+        var events = _mouseStateTracker.DequeueEvents();
 
-        foreach (var mouseEvent in events)
+        var eventsSpan = CollectionsMarshal.AsSpan(events);
+        
+        foreach (ref readonly var mouseEvent in eventsSpan)
         {
-            mouseStateTracker.ProcessEvent(mouseEvent);
+            _mouseStateTracker.ProcessEvent(mouseEvent);
 
             switch (mouseEvent.Type)
             {
-                case MouseEvent.EventType.WheelUp:
-                    if (mouseStateTracker.HotkeyState)
-                    {
-                        ProcessVolumeUp();
-                    }
+                case MouseEvent.EventType.WheelUp when _mouseStateTracker.HotkeyState:
+                    ProcessVolumeUp();
                     break;
 
-                case MouseEvent.EventType.WheelDown:
-                    if (mouseStateTracker.HotkeyState)
-                    {
-                        ProcessVolumeDown();
-                    }
+                case MouseEvent.EventType.WheelDown when _mouseStateTracker.HotkeyState:
+                    ProcessVolumeDown();
                     break;
 
-                case MouseEvent.EventType.LeftDown:
-                    if (mouseStateTracker.XButton2Pressed && !mouseStateTracker.XButton1Pressed)
-                    {
-                        vmController.QueueMediaAction(VolumeAction.ActionType.MediaPrev);
-                    }
+                case MouseEvent.EventType.LeftDown when _mouseStateTracker.XButton2Pressed && !_mouseStateTracker.XButton1Pressed:
+                    _vmController?.QueueMediaAction(VolumeAction.ActionType.MediaPrev);
                     break;
 
-                case MouseEvent.EventType.RightDown:
-                    if (mouseStateTracker.XButton2Pressed && !mouseStateTracker.XButton1Pressed)
-                    {
-                        vmController.QueueMediaAction(VolumeAction.ActionType.MediaNext);
-                    }
+                case MouseEvent.EventType.RightDown when _mouseStateTracker.XButton2Pressed && !_mouseStateTracker.XButton1Pressed:
+                    _vmController?.QueueMediaAction(VolumeAction.ActionType.MediaNext);
                     break;
 
-                case MouseEvent.EventType.MiddleDown:
-                    if (mouseStateTracker.XButton2Pressed && !mouseStateTracker.XButton1Pressed)
-                    {
-                        vmController.QueueMediaAction(VolumeAction.ActionType.MediaPlayPause);
-                    }
+                case MouseEvent.EventType.MiddleDown when _mouseStateTracker.XButton2Pressed && !_mouseStateTracker.XButton1Pressed:
+                    _vmController?.QueueMediaAction(VolumeAction.ActionType.MediaPlayPause);
                     break;
             }
         }
@@ -328,33 +334,37 @@ public partial class MousemeeterApp : Form
 
     private void ProcessVolumeUp()
     {
-        if (mouseStateTracker.XButton1Pressed && mouseStateTracker.XButton2Pressed)
+        if (_vmController is null) return;
+
+        var output = (_mouseStateTracker.XButton1Pressed, _mouseStateTracker.XButton2Pressed) switch
         {
-            vmController.QueueVolumeUp(config.Output3);
-        }
-        else if (mouseStateTracker.XButton1Pressed)
+            (true, true) => _config.Output3,
+            (true, false) => _config.Output1,
+            (false, true) => _config.Output2,
+            _ => -1
+        };
+
+        if (output >= 0)
         {
-            vmController.QueueVolumeUp(config.Output1);
-        }
-        else if (mouseStateTracker.XButton2Pressed)
-        {
-            vmController.QueueVolumeUp(config.Output2);
+            _vmController.QueueVolumeUp(output);
         }
     }
 
     private void ProcessVolumeDown()
     {
-        if (mouseStateTracker.XButton1Pressed && mouseStateTracker.XButton2Pressed)
+        if (_vmController is null) return;
+
+        var output = (_mouseStateTracker.XButton1Pressed, _mouseStateTracker.XButton2Pressed) switch
         {
-            vmController.QueueVolumeDown(config.Output3);
-        }
-        else if (mouseStateTracker.XButton1Pressed)
+            (true, true) => _config.Output3,
+            (true, false) => _config.Output1,
+            (false, true) => _config.Output2,
+            _ => -1
+        };
+
+        if (output >= 0)
         {
-            vmController.QueueVolumeDown(config.Output1);
-        }
-        else if (mouseStateTracker.XButton2Pressed)
-        {
-            vmController.QueueVolumeDown(config.Output2);
+            _vmController.QueueVolumeDown(output);
         }
     }
 
@@ -362,74 +372,68 @@ public partial class MousemeeterApp : Form
     {
         if ((WinAPI.GetAsyncKeyState(WinAPI.VK_F24) & 0x8000) != 0)
         {
-            DateTime now = DateTime.Now;
-
-            if (mouseStateTracker.XButton1Pressed && mouseStateTracker.XButton2Pressed)
-            {
-                vmController.QueueVolumeMute(config.Output3);
-            }
-            else if (mouseStateTracker.XButton1Pressed)
-            {
-                vmController.QueueVolumeMute(config.Output1);
-            }
-            else if (mouseStateTracker.XButton2Pressed)
-            {
-                vmController.QueueVolumeMute(config.Output2);
-            }
-            else
-            {
-                if ((now - lastF24Press).TotalMilliseconds < 250)
-                {
-                    if (config.CurrentFile == config.Profile2File)
-                    {
-                        vmController.LoadProfile(config.DefaultFile);
-                        config.CurrentFile = config.DefaultFile;
-                    }
-                    else
-                    {
-                        vmController.LoadProfile(config.Profile2File);
-                        config.CurrentFile = config.Profile2File;
-                    }
-                }
-                else
-                {
-                    Task.Delay(250).ContinueWith(t =>
-                    {
-                        if ((DateTime.Now - lastF24Press).TotalMilliseconds >= 250)
-                        {
-                            if (config.CurrentFile == config.Profile1File)
-                            {
-                                vmController.LoadProfile(config.DefaultFile);
-                                config.CurrentFile = config.DefaultFile;
-                            }
-                            else
-                            {
-                                vmController.LoadProfile(config.Profile1File);
-                                config.CurrentFile = config.Profile1File;
-                            }
-                        }
-                    });
-                }
-                lastF24Press = now;
-            }
-            Thread.Sleep(100);
+            ProcessF24Hotkey();
+            Thread.Sleep(GlobalHotkeyDelayMs);
         }
 
-        if ((WinAPI.GetAsyncKeyState(WinAPI.VK_F4) & 0x8000) != 0 &&
-            (WinAPI.GetAsyncKeyState(WinAPI.VK_CONTROL) & 0x8000) != 0 &&
-            (WinAPI.GetAsyncKeyState(WinAPI.VK_MENU) & 0x8000) != 0)
+        if (IsHotkeyPressed(WinAPI.VK_F4, WinAPI.VK_CONTROL, WinAPI.VK_MENU))
         {
             ForceKillActiveWindow();
-            Thread.Sleep(100);
+            Thread.Sleep(GlobalHotkeyDelayMs);
         }
 
-        if ((WinAPI.GetAsyncKeyState(WinAPI.VK_R) & 0x8000) != 0 &&
-            (WinAPI.GetAsyncKeyState(WinAPI.VK_CONTROL) & 0x8000) != 0 &&
-            (WinAPI.GetAsyncKeyState(WinAPI.VK_SHIFT) & 0x8000) != 0)
+        if (IsHotkeyPressed(WinAPI.VK_R, WinAPI.VK_CONTROL, WinAPI.VK_SHIFT))
         {
-            vmController.Restart();
-            Thread.Sleep(100);
+            _vmController?.Restart();
+            Thread.Sleep(GlobalHotkeyDelayMs);
         }
+    }
+
+    private void ProcessF24Hotkey()
+    {
+        if (_vmController is null) return;
+
+        var elapsedMs = _f24PressStopwatch.ElapsedMilliseconds;
+
+        var output = (_mouseStateTracker.XButton1Pressed, _mouseStateTracker.XButton2Pressed) switch
+        {
+            (true, true) => _config.Output3,
+            (true, false) => _config.Output1,
+            (false, true) => _config.Output2,
+            _ => -1
+        };
+
+        if (output >= 0)
+        {
+            _vmController.QueueVolumeMute(output);
+            return;
+        }
+
+        if (elapsedMs < DoubleClickThresholdMs)
+        {
+            var targetFile = _config.CurrentFile == _config.Profile2File ? _config.DefaultFile : _config.Profile2File;
+            _vmController.LoadProfile(targetFile);
+            _config.CurrentFile = targetFile;
+        }
+        else
+        {
+            _ = Task.Delay(DoubleClickThresholdMs).ContinueWith(_ =>
+            {
+                if (_f24PressStopwatch.ElapsedMilliseconds >= DoubleClickThresholdMs)
+                {
+                    var targetFile = _config.CurrentFile == _config.Profile1File ? _config.DefaultFile : _config.Profile1File;
+                    _vmController?.LoadProfile(targetFile);
+                    _config.CurrentFile = targetFile;
+                }
+            }, TaskScheduler.Default);
+        }
+
+        _f24PressStopwatch.Restart();
+    }
+
+    private static bool IsHotkeyPressed(params int[] keys)
+    {
+        return keys.All(key => (WinAPI.GetAsyncKeyState(key) & 0x8000) != 0);
     }
 
     protected override void WndProc(ref Message m)
@@ -437,16 +441,16 @@ public partial class MousemeeterApp : Form
         base.WndProc(ref m);
     }
 
-    private void ForceKillActiveWindow()
+    private static void ForceKillActiveWindow()
     {
         try
         {
-            IntPtr hWnd = WinAPI.GetForegroundWindow();
-            WinAPI.GetWindowThreadProcessId(hWnd, out uint processId);
+            var hWnd = WinAPI.GetForegroundWindow();
+            WinAPI.GetWindowThreadProcessId(hWnd, out var processId);
 
             if (processId != 0)
             {
-                Process process = Process.GetProcessById((int)processId);
+                using var process = Process.GetProcessById((int)processId);
                 process.Kill();
             }
         }
@@ -456,25 +460,25 @@ public partial class MousemeeterApp : Form
         }
     }
 
-    private void ReloadApplication()
+    private static void ReloadApplication()
     {
         Application.Restart();
     }
 
     private void RefreshConfig()
     {
-        config.LoadConfig();
+        _config.LoadConfig();
         Console.WriteLine("Configuration refreshed");
     }
 
-    private void OpenConfig()
+    private static void OpenConfig()
     {
         try
         {
-            string configPath = Path.Combine(Application.StartupPath, "config.ini");
+            var configPath = Path.Combine(Application.StartupPath, "config.ini");
             if (File.Exists(configPath))
             {
-                Process.Start("notepad.exe", configPath);
+                using var process = Process.Start("notepad.exe", configPath);
             }
         }
         catch (Exception ex)
@@ -485,33 +489,37 @@ public partial class MousemeeterApp : Form
 
     private void ExitApplication()
     {
-        inputTimer?.Stop();
+        if (_isDisposed) return;
+        
+        _isDisposed = true;
+        _inputTimer?.Stop();
 
-        if (mouseHookId != IntPtr.Zero)
+        if (_mouseHookId != IntPtr.Zero)
         {
-            WinAPI.UnhookWindowsHookEx(mouseHookId);
-            mouseHookId = IntPtr.Zero;
+            WinAPI.UnhookWindowsHookEx(_mouseHookId);
+            _mouseHookId = IntPtr.Zero;
         }
 
-        vmController?.Disconnect();
-        trayIcon?.Dispose();
+        _vmController?.Disconnect();
+        _trayIcon?.Dispose();
         Application.Exit();
     }
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing)
+        if (disposing && !_isDisposed)
         {
-            inputTimer?.Dispose();
+            _isDisposed = true;
+            _inputTimer?.Dispose();
 
-            if (mouseHookId != IntPtr.Zero)
+            if (_mouseHookId != IntPtr.Zero)
             {
-                WinAPI.UnhookWindowsHookEx(mouseHookId);
-                mouseHookId = IntPtr.Zero;
+                WinAPI.UnhookWindowsHookEx(_mouseHookId);
+                _mouseHookId = IntPtr.Zero;
             }
 
-            vmController?.Disconnect();
-            trayIcon?.Dispose();
+            _vmController?.Disconnect();
+            _trayIcon?.Dispose();
         }
         base.Dispose(disposing);
     }
