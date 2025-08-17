@@ -14,6 +14,7 @@ public sealed partial class MousemeeterApp : IDisposable
     private Timer? _inputTimer;
     private IntPtr _mouseHookId = IntPtr.Zero;
     private WinAPI.LowLevelMouseProc? _mouseHookProc;
+    private ToolStripMenuItem? _toggleTimerMenuItem;
     
     private volatile bool _isActivated = true;
     private volatile bool _isDisposed = false;
@@ -59,7 +60,6 @@ public sealed partial class MousemeeterApp : IDisposable
 
     private static async Task WaitForVoicemeeterAsync()
     {
-        // Use array instead of ReadOnlySpan for async methods
         string[] vmProcessNames = ["voicemeeter8", "voicemeeter8x64", "voicemeeter"];
 
         Console.WriteLine("Waiting for Voicemeeter to start...");
@@ -78,7 +78,7 @@ public sealed partial class MousemeeterApp : IDisposable
                         if (processes.Length > 0)
                         {
                             Console.WriteLine($"Found Voicemeeter process: {processName}");
-                            await Task.Delay(5000, cancellationTokenSource.Token); // Startup delay
+                            await Task.Delay(2000, cancellationTokenSource.Token); // Startup delay
                             return;
                         }
                     }
@@ -149,7 +149,10 @@ public sealed partial class MousemeeterApp : IDisposable
         };
 
         var contextMenu = new ContextMenuStrip();
+        _toggleTimerMenuItem = new ToolStripMenuItem("Disable", null, (_, _) => ToggleActivated());
         contextMenu.Items.AddRange([
+            _toggleTimerMenuItem,
+            new ToolStripSeparator(),
             new ToolStripMenuItem("Reload", null, (_, _) => ReloadApplication()),
             new ToolStripMenuItem("Refresh Config", null, (_, _) => RefreshConfig()),
             new ToolStripSeparator(),
@@ -161,14 +164,34 @@ public sealed partial class MousemeeterApp : IDisposable
         _trayIcon.ContextMenuStrip = contextMenu;
     }
 
+    private void ToggleActivated()
+    {
+        _isActivated = !_isActivated;
+
+        if (_toggleTimerMenuItem is not null)
+        {
+            _toggleTimerMenuItem.Text = _isActivated ? "Disable" : "Enable";
+        }
+
+        try
+        {
+            if (!_isActivated)
+                System.Media.SystemSounds.Beep.Play();
+        }
+        catch
+        {
+        }
+    }
+
     private void SetupInputTimer()
     {
         _inputTimer = new Timer
         {
-            Interval = 50
+            Interval = 100
         };
         _inputTimer.Tick += InputTimer_Tick;
         _inputTimer.Start();
+        if (_toggleTimerMenuItem is not null) _toggleTimerMenuItem.Text = "Disable";
     }
 
     private void SetupMouseHook()
@@ -281,44 +304,53 @@ public sealed partial class MousemeeterApp : IDisposable
 
     private void InputTimer_Tick(object? sender, EventArgs e)
     {
-        if (!_isActivated || _isDisposed) return;
+        if (_isDisposed) return;
+
+        HandleGlobalHotkeys();
+
+        if (!_isActivated) return;
 
         ProcessMouseEvents();
-        HandleGlobalHotkeys();
     }
 
     private void ProcessMouseEvents()
     {
-        var events = _mouseStateTracker.DequeueEvents();
-
-        var eventsSpan = CollectionsMarshal.AsSpan(events);
-        
-        foreach (ref readonly var mouseEvent in eventsSpan)
+        try
         {
-            _mouseStateTracker.ProcessEvent(mouseEvent);
+            var events = _mouseStateTracker.DequeueEvents();
 
-            switch (mouseEvent.Type)
+            var eventsSpan = CollectionsMarshal.AsSpan(events);
+            foreach (ref readonly var mouseEvent in eventsSpan)
             {
-                case MouseEvent.EventType.WheelUp when _mouseStateTracker.HotkeyState:
-                    ProcessVolumeUp();
-                    break;
+                _mouseStateTracker.ProcessEvent(mouseEvent);
 
-                case MouseEvent.EventType.WheelDown when _mouseStateTracker.HotkeyState:
-                    ProcessVolumeDown();
-                    break;
+                switch (mouseEvent.Type)
+                {
+                    case MouseEvent.EventType.WheelUp when _mouseStateTracker.HotkeyState:
+                        ProcessVolumeUp();
+                        break;
 
-                case MouseEvent.EventType.LeftDown when _mouseStateTracker.XButton2Pressed && !_mouseStateTracker.XButton1Pressed:
-                    _vmController?.QueueMediaAction(VolumeAction.ActionType.MediaPrev);
-                    break;
+                    case MouseEvent.EventType.WheelDown when _mouseStateTracker.HotkeyState:
+                        ProcessVolumeDown();
+                        break;
 
-                case MouseEvent.EventType.RightDown when _mouseStateTracker.XButton2Pressed && !_mouseStateTracker.XButton1Pressed:
-                    _vmController?.QueueMediaAction(VolumeAction.ActionType.MediaNext);
-                    break;
+                    case MouseEvent.EventType.LeftDown when _mouseStateTracker.XButton2Pressed && !_mouseStateTracker.XButton1Pressed:
+                        _vmController?.QueueMediaAction(VolumeAction.ActionType.MediaPrev);
+                        break;
 
-                case MouseEvent.EventType.MiddleDown when _mouseStateTracker.XButton2Pressed && !_mouseStateTracker.XButton1Pressed:
-                    _vmController?.QueueMediaAction(VolumeAction.ActionType.MediaPlayPause);
-                    break;
+                    case MouseEvent.EventType.RightDown when _mouseStateTracker.XButton2Pressed && !_mouseStateTracker.XButton1Pressed:
+                        _vmController?.QueueMediaAction(VolumeAction.ActionType.MediaNext);
+                        break;
+
+                    case MouseEvent.EventType.MiddleDown when _mouseStateTracker.XButton2Pressed && !_mouseStateTracker.XButton1Pressed:
+                        _vmController?.QueueMediaAction(VolumeAction.ActionType.MediaPlayPause);
+                        break;
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error processing mouse events: {ex.Message}");
         }
     }
 
@@ -363,6 +395,12 @@ public sealed partial class MousemeeterApp : IDisposable
         if ((WinAPI.GetAsyncKeyState(WinAPI.VK_F24) & 0x8000) != 0)
         {
             ProcessF24Hotkey();
+            Thread.Sleep(GlobalHotkeyDelayMs);
+        }
+
+        if ((WinAPI.GetAsyncKeyState(WinAPI.VK_F15) & 0x8000) != 0)
+        {
+            ToggleActivated();
             Thread.Sleep(GlobalHotkeyDelayMs);
         }
 

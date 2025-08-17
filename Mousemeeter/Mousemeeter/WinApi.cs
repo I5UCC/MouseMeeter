@@ -68,6 +68,7 @@ public static class WinAPI
     public const int VK_MBUTTON = 0x04;
     public const int VK_R = 0x52;
     public const int VK_F4 = 0x73;
+    public const int VK_F15 = 0x7E;
     public const int VK_F24 = 0x87;
     public const int VK_CONTROL = 0x11;
     public const int VK_SHIFT = 0x10;
