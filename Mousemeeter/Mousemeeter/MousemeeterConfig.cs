@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Globalization;
 
 namespace Mousemeeter;
 
@@ -11,18 +6,18 @@ public class MousemeeterConfig
 {
     public bool RunAsAdmin { get; set; } = true;
     public int TitleMatchMode { get; set; } = 3;
-    public bool ResetOnStartup { get; set; } = true;
-    public bool SetAffinity { get; set; } = true;
-    public bool SetCracklingFix { get; set; } = true;
+    public bool ResetOnStartup { get; private set; } = true;
+    public bool SetAffinity { get; private set; } = true;
+    public bool SetCracklingFix { get; private set; } = true;
 
-    public int Output1 { get; set; } = 5;
-    public int Output2 { get; set; } = 6;
-    public int Output3 { get; set; } = 7;
-    public float VolumeChangeAmount { get; set; } = 0.5f;
+    public int Output1 { get; private set; } = 5;
+    public int Output2 { get; private set; } = 6;
+    public int Output3 { get; private set; } = 7;
+    public float VolumeChangeAmount { get; private set; } = 0.5f;
 
-    public string DefaultFile { get; set; } = "default.xml";
-    public string Profile1File { get; set; } = "profile1.xml";
-    public string Profile2File { get; set; } = "profile2.xml";
+    public string DefaultFile { get; private set; } = "default.xml";
+    public string Profile1File { get; private set; } = "profile1.xml";
+    public string Profile2File { get; private set; } = "profile2.xml";
     public string CurrentFile { get; set; } = "default.xml";
 
     public List<string> DeactivateOnWindow { get; set; } = new List<string>();
@@ -38,16 +33,16 @@ public class MousemeeterConfig
         try
         {
             var lines = File.ReadAllLines(configPath);
-            string currentSection = "";
+            var currentSection = string.Empty;
 
             foreach (var line in lines)
             {
                 var trimmedLine = line.Trim();
-                if (trimmedLine.StartsWith("[") && trimmedLine.EndsWith("]"))
+                if (trimmedLine.StartsWith('[') && trimmedLine.EndsWith(']'))
                 {
                     currentSection = trimmedLine.Substring(1, trimmedLine.Length - 2);
                 }
-                else if (trimmedLine.Contains("="))
+                else if (trimmedLine.Contains('='))
                 {
                     var parts = trimmedLine.Split('=');
                     if (parts.Length == 2)
@@ -128,9 +123,9 @@ public class MousemeeterConfig
         }
     }
 
-    private void CreateDefaultConfig(string configPath)
+    private static void CreateDefaultConfig(string configPath)
     {
-        var defaultConfig = @"[Settings]
+        const string defaultConfig = @"[Settings]
 RunAsAdmin=True
 TitleMatchMode=3
 ResetOnStartup=True
