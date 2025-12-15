@@ -10,59 +10,60 @@ namespace Mousemeeter;
 public class VoicemeeterController
 {
     [DllImport("VoicemeeterRemote64.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern int VBVMR_Login();
+    private static extern int VBVMR_Login();
 
     [DllImport("VoicemeeterRemote64.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern int VBVMR_Logout();
+    private static extern int VBVMR_Logout();
 
     [DllImport("VoicemeeterRemote64.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern int VBVMR_GetParameterFloat([MarshalAs(UnmanagedType.LPStr)] string szParamName, ref float pValue);
+    private static extern int VBVMR_GetParameterFloat([MarshalAs(UnmanagedType.LPStr)] string szParamName, ref float pValue);
 
     [DllImport("VoicemeeterRemote64.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern int VBVMR_SetParameterFloat([MarshalAs(UnmanagedType.LPStr)] string szParamName, float Value);
+    private static extern int VBVMR_SetParameterFloat([MarshalAs(UnmanagedType.LPStr)] string szParamName, float Value);
 
     [DllImport("VoicemeeterRemote64.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern int VBVMR_SetParameterStringA([MarshalAs(UnmanagedType.LPStr)] string szParamName, [MarshalAs(UnmanagedType.LPStr)] string szString);
+    private static extern int VBVMR_SetParameterStringA([MarshalAs(UnmanagedType.LPStr)] string szParamName, [MarshalAs(UnmanagedType.LPStr)] string szString);
 
     [DllImport("VoicemeeterRemote64.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern int VBVMR_IsParametersDirty();
+    private static extern int VBVMR_IsParametersDirty();
 
-    private MousemeeterConfig config;
-    private bool isConnected = false;
+    private readonly MousemeeterConfig _config;
+    private bool _isConnected = false;
 
     // Cached volume values
-    private Dictionary<int, float> cachedGainValues = new Dictionary<int, float>();
-    private Dictionary<int, bool> cachedMuteValues = new Dictionary<int, bool>();
-    private DateTime lastSync = DateTime.MinValue;
-    private readonly TimeSpan syncInterval = TimeSpan.FromSeconds(1);
+    private readonly Dictionary<int, float> _cachedGainValues = new Dictionary<int, float>(3);
+    private readonly Dictionary<int, bool> _cachedMuteValues = new Dictionary<int, bool>(3);
 
     // Background processing
-    private readonly Queue<VolumeAction> actionQueue = new Queue<VolumeAction>();
-    private readonly object queueLock = new object();
-    private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-    private Task processingTask;
+    private readonly Queue<VolumeAction> _actionQueue = new Queue<VolumeAction>();
+    private readonly Lock _queueLock = new Lock();
+    private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+    private readonly Task _processingTask;
 
     public VoicemeeterController(MousemeeterConfig config)
     {
-        this.config = config;
+        this._config = config;
         Connect();
 
         // Start background processing task
-        processingTask = Task.Run(ProcessActionsBackground, cancellationTokenSource.Token);
+        _processingTask = Task.Run(ProcessActionsBackground, _cancellationTokenSource.Token);
     }
 
-    public bool Connect()
+    private bool Connect()
     {
         try
         {
-            int result = VBVMR_Login();
-            isConnected = (result == 0 || result == 1);
-            if (isConnected)
+            var result = VBVMR_Login();
+            _isConnected = result is 0 or 1;
+
+            if (!_isConnected)
             {
-                Console.WriteLine("Connected to Voicemeeter");
-                SyncAllValues();
+                Console.WriteLine("Voicemeeter is not running or failed to connect.");
+                return false;
             }
-            return isConnected;
+            
+            Console.WriteLine("Connected to Voicemeeter");
+            return _isConnected;
         }
         catch (Exception ex)
         {
@@ -71,42 +72,55 @@ public class VoicemeeterController
         }
     }
 
-    private void SyncAllValues()
+    public void SyncAllValues()
     {
-        if (!isConnected) return;
+        if (!_isConnected) return;
 
         try
         {
-            int[] outputs = { config.Output1, config.Output2, config.Output3 };
-            foreach (int output in outputs)
+            int[] outputs = { _config.Output1, _config.Output2, _config.Output3 };
+            Console.WriteLine("Syncing Voicemeeter values...");
+            foreach (var output in outputs)
             {
                 SyncStripValues(output);
             }
-            lastSync = DateTime.Now;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error syncing values: {ex.Message}");
         }
     }
+    
+    private static void WaitNotDirty()
+    {
+        var delay = 10;
+        while (VBVMR_IsParametersDirty() == 1)
+        {
+            Thread.Sleep(delay);
+            delay = Math.Min(delay * 2, 200);
+        }
+    }
+
 
     private void SyncStripValues(int strip)
     {
         try
         {
-            string gainParam = $"Strip[{strip}].Gain";
+            WaitNotDirty();
+            var gainParam = $"Strip[{strip}].Gain";
             float gainValue = 0;
             if (VBVMR_GetParameterFloat(gainParam, ref gainValue) == 0)
             {
-                cachedGainValues[strip] = gainValue;
+                _cachedGainValues[strip] = gainValue;
             }
 
-            string muteParam = $"Strip[{strip}].Mute";
+            var muteParam = $"Strip[{strip}].Mute";
             float muteValue = 0;
             if (VBVMR_GetParameterFloat(muteParam, ref muteValue) == 0)
             {
-                cachedMuteValues[strip] = muteValue != 0;
+                _cachedMuteValues[strip] = muteValue != 0;
             }
+            Console.WriteLine($"Synced strip {strip}: Gain={gainValue:F1} dB, Mute={(muteValue != 0 ? "ON" : "OFF")}");
         }
         catch (Exception ex)
         {
@@ -116,69 +130,65 @@ public class VoicemeeterController
 
     public void QueueVolumeUp(int strip)
     {
-        lock (queueLock)
+        lock (_queueLock)
         {
-            actionQueue.Enqueue(new VolumeAction
+            _actionQueue.Enqueue(new VolumeAction
             {
                 Type = VolumeAction.ActionType.VolumeUp,
-                Strip = strip,
-                Timestamp = DateTime.Now
+                Strip = strip
             });
         }
     }
 
     public void QueueVolumeDown(int strip)
     {
-        lock (queueLock)
+        lock (_queueLock)
         {
-            actionQueue.Enqueue(new VolumeAction
+            _actionQueue.Enqueue(new VolumeAction
             {
                 Type = VolumeAction.ActionType.VolumeDown,
-                Strip = strip,
-                Timestamp = DateTime.Now
+                Strip = strip
             });
         }
     }
 
     public void QueueVolumeMute(int strip)
     {
-        lock (queueLock)
+        lock (_queueLock)
         {
-            actionQueue.Enqueue(new VolumeAction
+            _actionQueue.Enqueue(new VolumeAction
             {
                 Type = VolumeAction.ActionType.Mute,
-                Strip = strip,
-                Timestamp = DateTime.Now
+                Strip = strip
             });
         }
     }
 
     public void QueueMediaAction(VolumeAction.ActionType action)
     {
-        lock (queueLock)
+        lock (_queueLock)
         {
-            actionQueue.Enqueue(new VolumeAction
+            _actionQueue.Enqueue(new VolumeAction
             {
                 Type = action,
-                Strip = 0,
-                Timestamp = DateTime.Now
+                Strip = 0
             });
         }
     }
 
     private async Task ProcessActionsBackground()
     {
-        while (!cancellationTokenSource.Token.IsCancellationRequested)
+        while (!_cancellationTokenSource.Token.IsCancellationRequested)
         {
             try
             {
                 var actionsToProcess = new List<VolumeAction>();
 
-                lock (queueLock)
+                lock (_queueLock)
                 {
-                    while (actionQueue.Count > 0)
+                    while (_actionQueue.Count > 0)
                     {
-                        actionsToProcess.Add(actionQueue.Dequeue());
+                        actionsToProcess.Add(_actionQueue.Dequeue());
                     }
                 }
 
@@ -187,7 +197,7 @@ public class VoicemeeterController
                     ProcessAction(action);
                 }
 
-                await Task.Delay(1, cancellationTokenSource.Token); // 1ms delay
+                await Task.Delay(1, _cancellationTokenSource.Token); // 1ms delay
             }
             catch (OperationCanceledException)
             {
@@ -196,7 +206,7 @@ public class VoicemeeterController
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in background processing: {ex.Message}");
-                await Task.Delay(10, cancellationTokenSource.Token);
+                await Task.Delay(10, _cancellationTokenSource.Token);
             }
         }
     }
@@ -225,6 +235,8 @@ public class VoicemeeterController
                 case VolumeAction.ActionType.MediaPlayPause:
                     WinAPI.keybd_event(WinAPI.VK_MEDIA_PLAY_PAUSE, 0, WinAPI.KEYEVENTF_EXTENTEDKEY, IntPtr.Zero);
                     break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(action), action.Type, "Unknown action type");
             }
         }
         catch (Exception ex)
@@ -235,24 +247,25 @@ public class VoicemeeterController
 
     private void VolumeUp(int strip)
     {
-        if (!isConnected) return;
+        if (!_isConnected) return;
 
         try
         {
-            if (!cachedGainValues.ContainsKey(strip))
+            if (!_cachedGainValues.ContainsKey(strip))
             {
                 SyncStripValues(strip);
             }
 
-            float newGain = cachedGainValues.GetValueOrDefault(strip, 0) + config.VolumeChangeAmount;
+            var newGain = _cachedGainValues.GetValueOrDefault(strip, 0) + _config.VolumeChangeAmount;
             newGain = Math.Max(-60.0f, Math.Min(12.0f, newGain));
 
-            string paramName = $"Strip[{strip}].Gain";
-            if (VBVMR_SetParameterFloat(paramName, newGain) == 0)
+            if (VBVMR_SetParameterFloat($"Strip[{strip}].Gain", newGain) != 0)
             {
-                cachedGainValues[strip] = newGain;
-                Console.WriteLine($"Strip {strip} volume: {newGain:F1} dB");
+                throw new COMException("Unknown communication error.");
             }
+            
+            _cachedGainValues[strip] = newGain;
+            Console.WriteLine($"Strip {strip} volume: {newGain:F1} dB");
         }
         catch (Exception ex)
         {
@@ -262,24 +275,20 @@ public class VoicemeeterController
 
     private void VolumeDown(int strip)
     {
-        if (!isConnected) return;
+        if (!_isConnected) return;
 
         try
         {
-            if (!cachedGainValues.ContainsKey(strip))
-            {
-                SyncStripValues(strip);
-            }
-
-            float newGain = cachedGainValues.GetValueOrDefault(strip, 0) - config.VolumeChangeAmount;
+            var newGain = _cachedGainValues.GetValueOrDefault(strip, 0) - _config.VolumeChangeAmount;
             newGain = Math.Max(-60.0f, Math.Min(12.0f, newGain));
 
-            string paramName = $"Strip[{strip}].Gain";
-            if (VBVMR_SetParameterFloat(paramName, newGain) == 0)
+            if (VBVMR_SetParameterFloat($"Strip[{strip}].Gain", newGain) != 0)
             {
-                cachedGainValues[strip] = newGain;
-                Console.WriteLine($"Strip {strip} volume: {newGain:F1} dB");
+                throw new COMException("Unknown communication error.");
             }
+            
+            _cachedGainValues[strip] = newGain;
+            Console.WriteLine($"Strip {strip} volume: {newGain:F1} dB");
         }
         catch (Exception ex)
         {
@@ -289,23 +298,19 @@ public class VoicemeeterController
 
     private void VolumeMute(int strip)
     {
-        if (!isConnected) return;
+        if (!_isConnected) return;
 
         try
         {
-            if (!cachedMuteValues.ContainsKey(strip))
-            {
-                SyncStripValues(strip);
-            }
+            var newMute = !_cachedMuteValues.GetValueOrDefault(strip, false);
 
-            bool newMute = !cachedMuteValues.GetValueOrDefault(strip, false);
-            string paramName = $"Strip[{strip}].Mute";
-
-            if (VBVMR_SetParameterFloat(paramName, newMute ? 1.0f : 0.0f) == 0)
+            if (VBVMR_SetParameterFloat($"Strip[{strip}].Mute", newMute ? 1.0f : 0.0f) != 0)
             {
-                cachedMuteValues[strip] = newMute;
-                Console.WriteLine($"Strip {strip} mute: {(newMute ? "ON" : "OFF")}");
+                throw new COMException("Unknown communication error.");
             }
+            
+            _cachedMuteValues[strip] = newMute;
+            Console.WriteLine($"Strip {strip} mute: {(newMute ? "ON" : "OFF")}");
         }
         catch (Exception ex)
         {
@@ -315,13 +320,19 @@ public class VoicemeeterController
 
     public void Restart()
     {
-        if (!isConnected) return;
+        if (!_isConnected) return;
 
         try
         {
-            VBVMR_SetParameterStringA("Command.Restart", "1");
-            cachedGainValues.Clear();
-            cachedMuteValues.Clear();
+            if (VBVMR_SetParameterStringA("Command.Restart", "1") != 0)
+            {
+                throw new COMException("Unknown communication error.");
+            }
+            
+            Console.WriteLine("Voicemeeter restarted");
+            
+            _cachedGainValues.Clear();
+            _cachedMuteValues.Clear();
 
             Task.Delay(3000).ContinueWith(t => {
                 Connect();
@@ -335,26 +346,29 @@ public class VoicemeeterController
 
     public void LoadProfile(string filename)
     {
-        if (!isConnected) return;
+        if (!_isConnected) return;
 
         try
         {
-            string fullPath = Path.Combine(Application.StartupPath, filename);
+            var fullPath = Path.Combine(Application.StartupPath, filename);
             if (File.Exists(fullPath))
             {
-                VBVMR_SetParameterStringA("Command.Load", fullPath);
+                if (VBVMR_SetParameterStringA("Command.Load", fullPath) != 0)
+                {
+                    throw new COMException("Unknown communication error.");
+                }
+                
                 Console.WriteLine($"Loaded profile: {filename}");
 
-                cachedGainValues.Clear();
-                cachedMuteValues.Clear();
+                _cachedGainValues.Clear();
+                _cachedMuteValues.Clear();
 
-                Task.Delay(1000).ContinueWith(t => {
-                    SyncAllValues();
-                });
+                SyncAllValues();
             }
             else
             {
                 Console.WriteLine($"Profile file not found: {fullPath}");
+                SyncAllValues();
             }
         }
         catch (Exception ex)
@@ -365,16 +379,15 @@ public class VoicemeeterController
 
     public void Disconnect()
     {
-        cancellationTokenSource.Cancel();
-        processingTask?.Wait(1000);
+        _cancellationTokenSource.Cancel();
+        _processingTask?.Wait(1000);
 
-        if (isConnected)
-        {
-            VBVMR_Logout();
-            isConnected = false;
-            cachedGainValues.Clear();
-            cachedMuteValues.Clear();
-        }
+        if (!_isConnected) return;
+        
+        _ = VBVMR_Logout();
+        _isConnected = false;
+        _cachedGainValues.Clear();
+        _cachedMuteValues.Clear();
     }
 }
 
@@ -383,5 +396,4 @@ public struct VolumeAction
     public enum ActionType { VolumeUp, VolumeDown, Mute, MediaNext, MediaPrev, MediaPlayPause }
     public ActionType Type;
     public int Strip;
-    public DateTime Timestamp;
 }

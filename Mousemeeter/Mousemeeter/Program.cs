@@ -45,6 +45,10 @@ public sealed partial class MousemeeterApp : IDisposable
                 _vmController.LoadProfile(_config.DefaultFile);
                 _config.CurrentFile = _config.DefaultFile;
             }
+            else
+            {
+                _vmController.SyncAllValues();
+            }
 
             SetupInputTimer();
             SetupMouseHook();
@@ -180,6 +184,7 @@ public sealed partial class MousemeeterApp : IDisposable
         }
         catch
         {
+            // ignored
         }
     }
 
@@ -447,12 +452,11 @@ public sealed partial class MousemeeterApp : IDisposable
         {
             _ = Task.Delay(DoubleClickThresholdMs).ContinueWith(_ =>
             {
-                if (_f24PressStopwatch.ElapsedMilliseconds >= DoubleClickThresholdMs)
-                {
-                    var targetFile = _config.CurrentFile == _config.Profile1File ? _config.DefaultFile : _config.Profile1File;
-                    _vmController?.LoadProfile(targetFile);
-                    _config.CurrentFile = targetFile;
-                }
+                if (_f24PressStopwatch.ElapsedMilliseconds < DoubleClickThresholdMs) return;
+                
+                var targetFile = _config.CurrentFile == _config.Profile1File ? _config.DefaultFile : _config.Profile1File;
+                _vmController?.LoadProfile(targetFile);
+                _config.CurrentFile = targetFile;
             }, TaskScheduler.Default);
         }
 
@@ -471,11 +475,10 @@ public sealed partial class MousemeeterApp : IDisposable
             var hWnd = WinAPI.GetForegroundWindow();
             WinAPI.GetWindowThreadProcessId(hWnd, out var processId);
 
-            if (processId != 0)
-            {
-                using var process = Process.GetProcessById((int)processId);
-                process.Kill();
-            }
+            if (processId == 0) return;
+            
+            using var process = Process.GetProcessById((int)processId);
+            process.Kill();
         }
         catch (Exception ex)
         {
