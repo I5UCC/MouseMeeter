@@ -25,6 +25,9 @@ public static class WinAPI
 
     [DllImport("kernel32.dll")]
     public static extern IntPtr GetCurrentProcess();
+    
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool SetDllDirectory(string lpPathName);
 
     [DllImport("user32.dll")]
     public static extern short GetAsyncKeyState(int vKey);

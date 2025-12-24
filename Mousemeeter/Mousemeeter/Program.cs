@@ -35,6 +35,14 @@ public sealed partial class MousemeeterApp : IDisposable
             SetupTrayIcon();
             _config.LoadConfig();
 
+            var voicemeeterPath = _config.VoicemeeterPath ??
+                                  Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+                                      "VB", "Voicemeeter");
+            
+            Console.WriteLine($"Voicemeeter path: {voicemeeterPath}");
+            
+            WinAPI.SetDllDirectory(voicemeeterPath);
+
             await WaitForVoicemeeterAsync();
 
             _vmController = new VoicemeeterController(_config);

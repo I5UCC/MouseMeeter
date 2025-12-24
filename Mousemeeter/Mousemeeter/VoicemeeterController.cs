@@ -9,6 +9,8 @@ namespace Mousemeeter;
 
 public class VoicemeeterController
 {
+    private const string VMDll = "VoicemeeterRemote64.dll";
+    
     [DllImport("VoicemeeterRemote64.dll", CallingConvention = CallingConvention.Cdecl)]
     private static extern int VBVMR_Login();
 

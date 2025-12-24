@@ -19,6 +19,8 @@ public class MousemeeterConfig
     public string Profile1File { get; private set; } = "profile1.xml";
     public string Profile2File { get; private set; } = "profile2.xml";
     public string CurrentFile { get; set; } = "default.xml";
+    
+    public string? VoicemeeterPath { get; set; }
 
     public List<string> DeactivateOnWindow { get; set; } = new List<string>();
 
@@ -92,6 +94,9 @@ public class MousemeeterConfig
             case "SetCracklingFix":
                 SetCracklingFix = bool.Parse(value);
                 break;
+            case "VoicemeeterPath":
+                VoicemeeterPath = value == "default" ? null : value;
+                break;
         }
     }
 
@@ -131,6 +136,7 @@ TitleMatchMode=3
 ResetOnStartup=True
 SetAffinity=True
 SetCracklingFix=True
+VoicemeeterPath=default
 
 [VoicemeeterSettings]
 OUTPUT_1=5
