@@ -23,6 +23,10 @@ public sealed partial class MousemeeterApp : IDisposable
     private const int DoubleClickThresholdMs = 250;
     private const int GlobalHotkeyDelayMs = 100;
 
+    private Process[] _voicemeeterProcesses = [];
+    private readonly string[] _vmProcessNames = ["voicemeeter8", "voicemeeter8x64", "voicemeeter"];
+    private readonly string _audiodgProcessName = "audiodg";
+
     public MousemeeterApp()
     {
         InitializeApplicationAsync();
@@ -32,6 +36,7 @@ public sealed partial class MousemeeterApp : IDisposable
     {
         try
         {
+            FileLogger.ClearLog();
             SetupTrayIcon();
             _config.LoadConfig();
 
@@ -39,7 +44,12 @@ public sealed partial class MousemeeterApp : IDisposable
                                   Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
                                       "VB", "Voicemeeter");
             
-            Console.WriteLine($"Voicemeeter path: {voicemeeterPath}");
+            if (!Directory.Exists(voicemeeterPath))
+            {
+                throw new DirectoryNotFoundException($"Voicemeeter directory not found: {voicemeeterPath}");
+            }
+            
+            FileLogger.Log($"Voicemeeter path: {voicemeeterPath}");
             
             WinAPI.SetDllDirectory(voicemeeterPath);
 
@@ -61,20 +71,18 @@ public sealed partial class MousemeeterApp : IDisposable
             SetupInputTimer();
             SetupMouseHook();
 
-            Console.WriteLine("Mousemeeter started successfully");
+            FileLogger.Log("Mousemeeter started successfully");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to initialize application: {ex.Message}");
+            FileLogger.Log($"Failed to initialize application: {ex.Message}");
             ExitApplication();
         }
     }
 
-    private static async Task WaitForVoicemeeterAsync()
+    private async Task WaitForVoicemeeterAsync()
     {
-        string[] vmProcessNames = ["voicemeeter8", "voicemeeter8x64", "voicemeeter"];
-
-        Console.WriteLine("Waiting for Voicemeeter to start...");
+        FileLogger.Log("Waiting for Voicemeeter to start...");
 
         using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(5)); // 5-minute timeout
         
@@ -82,24 +90,27 @@ public sealed partial class MousemeeterApp : IDisposable
         {
             while (!cancellationTokenSource.Token.IsCancellationRequested)
             {
-                foreach (var processName in vmProcessNames)
+                foreach (var processName in _vmProcessNames)
                 {
                     var processes = Process.GetProcessesByName(processName);
                     try
                     {
                         if (processes.Length > 0)
                         {
-                            Console.WriteLine($"Found Voicemeeter process: {processName}");
-                            await Task.Delay(2000, cancellationTokenSource.Token); // Startup delay
+                            FileLogger.Log($"Found Voicemeeter process: {processName}");
+                            _voicemeeterProcesses = processes;
+                            await Task.Delay(1000, cancellationTokenSource.Token); // Startup delay
                             return;
                         }
                     }
                     finally
                     {
-                        // Properly dispose all processes
-                        foreach (var process in processes)
+                        if (processes != _voicemeeterProcesses)
                         {
-                            process?.Dispose();
+                            foreach (var proc in processes)
+                            {
+                                proc.Dispose();
+                            }
                         }
                     }
                 }
@@ -119,13 +130,15 @@ public sealed partial class MousemeeterApp : IDisposable
         {
             try
             {
-                using var currentProcess = Process.GetCurrentProcess();
-                currentProcess.PriorityClass = ProcessPriorityClass.High;
-                Console.WriteLine("Set high process priority");
+                foreach (var process in _voicemeeterProcesses)
+                {
+                    process.PriorityClass = ProcessPriorityClass.High;
+                    FileLogger.Log($"Set process priority to High for {process.ProcessName} (PID: {process.Id})");
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to set process priority: {ex.Message}");
+                FileLogger.Log($"Failed to set process priority: {ex.Message}");
             }
         }
 
@@ -133,20 +146,18 @@ public sealed partial class MousemeeterApp : IDisposable
         {
             try
             {
-                using var process = Process.Start(new ProcessStartInfo
+                var audiodgProcesses = Process.GetProcessesByName(_audiodgProcessName);
+                foreach (var audiodgProcess in audiodgProcesses)
                 {
-                    FileName = "powershell",
-                    Arguments = "$Process = Get-Process audiodg -ErrorAction SilentlyContinue; if($Process) { $Process.ProcessorAffinity=1; $Process.PriorityClass='High' }",
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    CreateNoWindow = true,
-                    UseShellExecute = false
-                });
+                    audiodgProcess.ProcessorAffinity = (IntPtr)1;
+                    audiodgProcess.PriorityClass = ProcessPriorityClass.High;
+                }
                 
-                Console.WriteLine("Applied crackling fix");
+                FileLogger.Log("Applied crackling fix");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to apply crackling fix: {ex.Message}");
+                FileLogger.Log($"Failed to apply crackling fix: {ex.Message}");
             }
         }
     }
@@ -220,11 +231,11 @@ public sealed partial class MousemeeterApp : IDisposable
 
         if (_mouseHookId == IntPtr.Zero)
         {
-            Console.WriteLine("Failed to install mouse hook");
+            FileLogger.Log("Failed to install mouse hook");
         }
         else
         {
-            Console.WriteLine("Mouse hook installed successfully");
+            FileLogger.Log("Mouse hook installed successfully");
         }
     }
 
@@ -363,7 +374,7 @@ public sealed partial class MousemeeterApp : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error processing mouse events: {ex.Message}");
+            FileLogger.Log($"Error processing mouse events: {ex.Message}");
         }
     }
 
@@ -490,7 +501,7 @@ public sealed partial class MousemeeterApp : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to kill active window: {ex.Message}");
+            FileLogger.Log($"Failed to kill active window: {ex.Message}");
         }
     }
 
@@ -502,7 +513,7 @@ public sealed partial class MousemeeterApp : IDisposable
     private void RefreshConfig()
     {
         _config.LoadConfig();
-        Console.WriteLine("Configuration refreshed");
+        FileLogger.Log("Configuration refreshed");
     }
 
     private static void OpenConfig()
@@ -517,7 +528,7 @@ public sealed partial class MousemeeterApp : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to open config: {ex.Message}");
+            FileLogger.Log($"Failed to open config: {ex.Message}");
         }
     }
 
@@ -541,20 +552,18 @@ public sealed partial class MousemeeterApp : IDisposable
 
     public void Dispose()
     {
-        if (!_isDisposed)
+        if (_isDisposed) return;
+        _isDisposed = true;
+        _inputTimer?.Dispose();
+
+        if (_mouseHookId != IntPtr.Zero)
         {
-            _isDisposed = true;
-            _inputTimer?.Dispose();
-
-            if (_mouseHookId != IntPtr.Zero)
-            {
-                WinAPI.UnhookWindowsHookEx(_mouseHookId);
-                _mouseHookId = IntPtr.Zero;
-            }
-
-            _vmController?.Disconnect();
-            _trayIcon?.Dispose();
+            WinAPI.UnhookWindowsHookEx(_mouseHookId);
+            _mouseHookId = IntPtr.Zero;
         }
+
+        _vmController?.Disconnect();
+        _trayIcon?.Dispose();
     }
 }
 
