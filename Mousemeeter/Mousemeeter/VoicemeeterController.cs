@@ -9,8 +9,6 @@ namespace Mousemeeter;
 
 public class VoicemeeterController
 {
-    private const string VMDll = "VoicemeeterRemote64.dll";
-    
     [DllImport("VoicemeeterRemote64.dll", CallingConvention = CallingConvention.Cdecl)]
     private static extern int VBVMR_Login();
 
@@ -80,7 +78,7 @@ public class VoicemeeterController
 
         try
         {
-            int[] outputs = { _config.Output1, _config.Output2, _config.Output3 };
+            int[] outputs = [_config.Output1, _config.Output2, _config.Output3];
             Console.WriteLine("Syncing Voicemeeter values...");
             foreach (var output in outputs)
             {
@@ -93,21 +91,45 @@ public class VoicemeeterController
         }
     }
     
-    private static void WaitNotDirty()
+    private static void WaitDirty()
     {
+        const int maxDelay = 2000;
         var delay = 10;
-        while (VBVMR_IsParametersDirty() == 1)
+        
+        while (VBVMR_IsParametersDirty() == 0)
         {
+            if (delay >= maxDelay)
+            {
+                Console.WriteLine("Timeout waiting for Voicemeeter parameters to become dirty.");
+                break;
+            }
             Thread.Sleep(delay);
-            delay = Math.Min(delay * 2, 200);
+            delay *= 2;
         }
     }
-
+    
+    private static void WaitNotDirty()
+    {
+        const int maxDelay = 4000;
+        var delay = 10;
+        
+        while (VBVMR_IsParametersDirty() != 0)
+        {
+            if (delay >= maxDelay)
+            {
+                Console.WriteLine("Timeout waiting for Voicemeeter parameters to become clean.");
+                break;
+            }
+            Thread.Sleep(delay);
+            delay *= 2;
+        }
+    }
 
     private void SyncStripValues(int strip)
     {
         try
         {
+            WaitDirty();
             WaitNotDirty();
             var gainParam = $"Strip[{strip}].Gain";
             float gainValue = 0;
@@ -246,58 +268,7 @@ public class VoicemeeterController
             Console.WriteLine($"Error processing action {action.Type}: {ex.Message}");
         }
     }
-
-    private void VolumeUp(int strip)
-    {
-        if (!_isConnected) return;
-
-        try
-        {
-            if (!_cachedGainValues.ContainsKey(strip))
-            {
-                SyncStripValues(strip);
-            }
-
-            var newGain = _cachedGainValues.GetValueOrDefault(strip, 0) + _config.VolumeChangeAmount;
-            newGain = Math.Max(-60.0f, Math.Min(12.0f, newGain));
-
-            if (VBVMR_SetParameterFloat($"Strip[{strip}].Gain", newGain) != 0)
-            {
-                throw new COMException("Unknown communication error.");
-            }
-            
-            _cachedGainValues[strip] = newGain;
-            Console.WriteLine($"Strip {strip} volume: {newGain:F1} dB");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error increasing volume: {ex.Message}");
-        }
-    }
-
-    private void VolumeDown(int strip)
-    {
-        if (!_isConnected) return;
-
-        try
-        {
-            var newGain = _cachedGainValues.GetValueOrDefault(strip, 0) - _config.VolumeChangeAmount;
-            newGain = Math.Max(-60.0f, Math.Min(12.0f, newGain));
-
-            if (VBVMR_SetParameterFloat($"Strip[{strip}].Gain", newGain) != 0)
-            {
-                throw new COMException("Unknown communication error.");
-            }
-            
-            _cachedGainValues[strip] = newGain;
-            Console.WriteLine($"Strip {strip} volume: {newGain:F1} dB");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error decreasing volume: {ex.Message}");
-        }
-    }
-
+    
     private void VolumeMute(int strip)
     {
         if (!_isConnected) return;
@@ -318,6 +289,44 @@ public class VoicemeeterController
         {
             Console.WriteLine($"Error toggling mute: {ex.Message}");
         }
+    }
+
+    private void VolumeSet(int strip, float newGain)
+    {
+        if (!_isConnected) return;
+
+        try
+        {
+            newGain = Math.Max(-60.0f, Math.Min(12.0f, newGain));
+
+            if (VBVMR_SetParameterFloat($"Strip[{strip}].Gain", newGain) != 0)
+            {
+                throw new COMException("Unknown communication error.");
+            }
+            
+            _cachedGainValues[strip] = newGain;
+            Console.WriteLine($"Strip {strip} volume set to: {newGain:F1} dB");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error setting volume: {ex.Message}");
+        }
+    }
+    
+    private void VolumeUp(int strip)
+    {
+        if (!_isConnected) return;
+
+        var newGain = _cachedGainValues.GetValueOrDefault(strip, 0) + _config.VolumeChangeAmount;
+        VolumeSet(strip, newGain);
+    }
+
+    private void VolumeDown(int strip)
+    {
+        if (!_isConnected) return;
+
+        var newGain = _cachedGainValues.GetValueOrDefault(strip, 0) - _config.VolumeChangeAmount;
+        VolumeSet(strip, newGain);
     }
 
     public void Restart()
