@@ -134,7 +134,13 @@ public sealed partial class MousemeeterApp : IDisposable
                 {
                     process.PriorityClass = ProcessPriorityClass.High;
                     FileLogger.Log($"Set process priority to High for {process.ProcessName} (PID: {process.Id})");
+                    process.Dispose();
                 }
+
+                var currentProcess = Process.GetCurrentProcess();
+                currentProcess.PriorityClass = ProcessPriorityClass.BelowNormal;
+                FileLogger.Log("Set Mousemeeter process priority to BelowNormal");
+                currentProcess.Dispose();
             }
             catch (Exception ex)
             {

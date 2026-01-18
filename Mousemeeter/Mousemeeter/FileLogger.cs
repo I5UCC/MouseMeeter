@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-
-public static class FileLogger
+﻿public static class FileLogger
 {
     private static string LogFilePath => "log.txt";
     private static readonly Lock LockObj = new();
