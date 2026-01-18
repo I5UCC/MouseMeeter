@@ -5,7 +5,7 @@
 <a href='https://ko-fi.com/i5ucc' target='_blank'><img height='35' style='border:0px;height:25px;' src='https://az743702.vo.msecnd.net/cdn/kofi3.png?v=0' border='0' alt='Buy Me a Coffee at ko-fi.com' />
 
 A relatively simple program binding mouse keys to do Voicemeeter Potato commands.
-This script primarily uses the mouse side buttons to control Voicemeeter (And also some other things). 
+This program primarily uses the mouse side buttons to control Voicemeeter (And also some other things). 
 These sidebuttons are normally used to go "Forward" or "Backward" on a page, these actions still work (Seen on the example picture).
 
 Loads a "default.xml" file on start and reset. Create one with the save feature of Voicemeeter and place it in the same folder.
@@ -38,11 +38,3 @@ Releasing Backward/Forward without triggering any of the above macros will just 
 
 ### Example
 ![Example picture](https://i.imgur.com/xqwWpx9.png)
-
-# Modifying the script
-
-Basically all of the communication with Voicemeeter happens in the Voicemeeter Class. To modify that, look into the [Documentation](https://saifaqqad.github.io/VMR.ahk/) of [VMR.ahk](https://github.com/SaifAqqad/VMR.ahk) to know how.
-
-# Credit
-
-[SaifAqqad](https://github.com/SaifAqqad) for their wrapper class for Voicemeeter's Remote API. <br>
