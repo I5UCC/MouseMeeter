@@ -4,7 +4,7 @@
 [![GitHub release (latest by date)](https://img.shields.io/github/downloads/i5ucc/Mousemeeter/latest/total?label=Latest%20version%20downloads)](https://github.com/I5UCC/Mousemeeter/releases/latest)
 <a href='https://ko-fi.com/i5ucc' target='_blank'><img height='35' style='border:0px;height:25px;' src='https://az743702.vo.msecnd.net/cdn/kofi3.png?v=0' border='0' alt='Buy Me a Coffee at ko-fi.com' />
 
-A relatively simple Autohotkey script binding mouse keys to do Voicemeeter Potato commands.
+A relatively simple program binding mouse keys to do Voicemeeter Potato commands.
 This script primarily uses the mouse side buttons to control Voicemeeter (And also some other things). 
 These sidebuttons are normally used to go "Forward" or "Backward" on a page, these actions still work (Seen on the example picture).
 
