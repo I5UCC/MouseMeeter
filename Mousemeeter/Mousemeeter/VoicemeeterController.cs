@@ -252,12 +252,15 @@ public class VoicemeeterController
                     break;
                 case VolumeAction.ActionType.MediaNext:
                     WinAPI.keybd_event(WinAPI.VK_MEDIA_NEXT_TRACK, 0, WinAPI.KEYEVENTF_EXTENTEDKEY, IntPtr.Zero);
+                    WinAPI.keybd_event(WinAPI.VK_MEDIA_NEXT_TRACK, 0, WinAPI.KEYEVENTF_EXTENTEDKEY | WinAPI.KEYEVENTF_KEYUP, IntPtr.Zero);
                     break;
                 case VolumeAction.ActionType.MediaPrev:
                     WinAPI.keybd_event(WinAPI.VK_MEDIA_PREV_TRACK, 0, WinAPI.KEYEVENTF_EXTENTEDKEY, IntPtr.Zero);
+                    WinAPI.keybd_event(WinAPI.VK_MEDIA_PREV_TRACK, 0, WinAPI.KEYEVENTF_EXTENTEDKEY | WinAPI.KEYEVENTF_KEYUP, IntPtr.Zero);
                     break;
                 case VolumeAction.ActionType.MediaPlayPause:
                     WinAPI.keybd_event(WinAPI.VK_MEDIA_PLAY_PAUSE, 0, WinAPI.KEYEVENTF_EXTENTEDKEY, IntPtr.Zero);
+                    WinAPI.keybd_event(WinAPI.VK_MEDIA_PLAY_PAUSE, 0, WinAPI.KEYEVENTF_EXTENTEDKEY | WinAPI.KEYEVENTF_KEYUP, IntPtr.Zero);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(action), action.Type, "Unknown action type");
