@@ -1,0 +1,11 @@
+[package]
+name = "xtask"
+description = "Build helpers (cargo xtask package)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+zip.workspace = true

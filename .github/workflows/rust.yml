@@ -1,0 +1,37 @@
+name: Rust
+
+on:
+  push:
+    paths: ["crates/**", "xtask/**", "assets/**", "Cargo.toml", "Cargo.lock", ".cargo/**", ".github/workflows/rust.yml"]
+  pull_request:
+    paths: ["crates/**", "xtask/**", "assets/**", "Cargo.toml", "Cargo.lock", ".cargo/**", ".github/workflows/rust.yml"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    # Mousemeeter is Windows-only (Win32 hooks and the Voicemeeter Remote API).
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+
+      - name: Build and package
+        run: cargo xtask package
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mousemeeter-windows
+          path: dist/*.zip
+          if-no-files-found: error

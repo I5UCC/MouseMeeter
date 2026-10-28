@@ -1,0 +1,27 @@
+[workspace]
+resolver = "3"
+members = ["crates/mousemeeter", "xtask"]
+default-members = ["crates/*"]
+
+[workspace.package]
+version = "3.0.0"
+edition = "2024"
+rust-version = "1.88"
+license = "GPL-3.0-only"
+repository = "https://github.com/I5UCC/MouseMeeter"
+
+[workspace.dependencies]
+anyhow = "1"
+# Settings window only; glow keeps the binary small compared to wgpu.
+eframe = { version = "0.31.1", default-features = false, features = ["default_fonts", "glow"] }
+image = { version = "0.25", default-features = false, features = ["ico", "png"] }
+libloading = "0.9.0"
+windows = "0.62.2"
+winresource = "0.1.34"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
