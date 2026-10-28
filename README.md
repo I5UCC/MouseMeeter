@@ -36,5 +36,38 @@ Loads a "default.xml" file on start and reset. Create one with the save feature 
 
 Releasing Backward/Forward without triggering any of the above macros will just send Backward/Forward again
 
+## Setup
+
+Download `Mousemeeter-windows.zip` from the [latest release](https://github.com/I5UCC/Mousemeeter/releases/latest) and extract it into a folder together with your profile XML files. A default `config.ini` is created there on first start, and `log.txt` is written next to the exe.
+
+## Configuration
+
+Right-click the tray icon → **Settings…** (or double-click the tray icon) to change the settings in a window. Saving applies them right away, except the startup options, which apply after **Reload**. They are stored in `config.ini`:
+
+| Key | Description |
+| --- | --- |
+| `RunAsAdmin` | Restart with administrator rights (UAC prompt). If declined, Mousemeeter keeps running without them. |
+| `ResetOnStartup` | Load `default_file` on start instead of reading the current values from Voicemeeter. |
+| `SetAffinity` | Raise Voicemeeter's process priority. |
+| `SetCracklingFix` | Pin `audiodg.exe` to one core with high priority (needs admin). |
+| `VoicemeeterPath` | Voicemeeter install folder, or `default`. |
+| `OUTPUT_1` / `OUTPUT_2` / `OUTPUT_3` | Strip index controlled with Backward / Forward / both. |
+| `VOLUME_CHANGE_AMOUNT` | dB per wheel step. |
+| `default_file` / `profile1_file` / `profile2_file` | Profile XML files. |
+| `[DeactivateOnWindow]` | Window titles (one per line, `key=title` or just `title`) where the mouse macros are disabled. |
+| `TitleMatchMode` | How those titles match: `1` = starts with, `2` = contains, `3` = exact. |
+
+## Building
+
+Mousemeeter is written in Rust and only builds on Windows.
+
+```
+cargo build --release    # target/release/Mousemeeter.exe
+cargo test
+cargo xtask package      # dist/Mousemeeter-windows.zip
+```
+
+Pushing a tag like `v3.0.0` builds the zip on GitHub Actions and attaches it to a release.
+
 ### Example
 ![Example picture](https://i.imgur.com/xqwWpx9.png)
