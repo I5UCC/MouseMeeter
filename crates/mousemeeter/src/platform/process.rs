@@ -3,21 +3,23 @@
 use std::ffi::c_void;
 use std::path::{Path, PathBuf};
 
-use windows::Win32::Foundation::{CloseHandle, HANDLE};
+use windows::Win32::Foundation::{
+    CloseHandle, ERROR_ACCESS_DENIED, ERROR_ALREADY_EXISTS, GetLastError, HANDLE,
+};
 use windows::Win32::Security::{GetTokenInformation, TOKEN_ELEVATION, TOKEN_QUERY, TokenElevation};
 use windows::Win32::System::Diagnostics::ToolHelp::{
     CreateToolhelp32Snapshot, PROCESSENTRY32W, Process32FirstW, Process32NextW, TH32CS_SNAPPROCESS,
 };
 use windows::Win32::System::Threading::{
-    BELOW_NORMAL_PRIORITY_CLASS, GetCurrentProcess, HIGH_PRIORITY_CLASS, OpenProcess,
+    BELOW_NORMAL_PRIORITY_CLASS, CreateMutexW, GetCurrentProcess, HIGH_PRIORITY_CLASS, OpenProcess,
     OpenProcessToken, PROCESS_ACCESS_RIGHTS, PROCESS_QUERY_LIMITED_INFORMATION,
     PROCESS_SET_INFORMATION, PROCESS_TERMINATE, SetPriorityClass, SetProcessAffinityMask,
     TerminateProcess,
 };
 use windows::Win32::UI::Shell::ShellExecuteW;
 use windows::Win32::UI::WindowsAndMessaging::{
-    FindWindowW, GetForegroundWindow, GetWindowTextW, GetWindowThreadProcessId, SW_SHOWNORMAL,
-    SetForegroundWindow,
+    FindWindowW, GetForegroundWindow, GetWindowTextW, GetWindowThreadProcessId, MB_ICONINFORMATION,
+    MB_OK, MessageBoxW, SW_SHOWNORMAL, SetForegroundWindow,
 };
 use windows::core::{HSTRING, PCWSTR, w};
 
@@ -173,6 +175,47 @@ pub fn relaunch_elevated() -> bool {
     let result =
         unsafe { ShellExecuteW(None, w!("runas"), &exe, PCWSTR::null(), &dir, SW_SHOWNORMAL) };
     result.0 as isize > 32
+}
+
+/// Held by the running tray app so a second copy can tell it is not alone. Released on drop.
+pub struct SingleInstance(HANDLE);
+
+impl SingleInstance {
+    /// None if another copy already holds it. A non-elevated copy cannot open an elevated
+    /// copy's lock, so access denied counts as already running too.
+    pub fn acquire() -> Option<Self> {
+        unsafe {
+            match CreateMutexW(None, false, w!("Local\\Mousemeeter-single-instance")) {
+                Ok(handle) if GetLastError() == ERROR_ALREADY_EXISTS => {
+                    let _ = CloseHandle(handle);
+                    None
+                }
+                Ok(handle) => Some(Self(handle)),
+                Err(e) if e.code() == ERROR_ACCESS_DENIED.to_hresult() => None,
+                // Better to run unguarded than not at all.
+                Err(_) => Some(Self(HANDLE::default())),
+            }
+        }
+    }
+}
+
+impl Drop for SingleInstance {
+    fn drop(&mut self) {
+        if !self.0.is_invalid() {
+            let _ = unsafe { CloseHandle(self.0) };
+        }
+    }
+}
+
+pub fn show_already_running() {
+    unsafe {
+        MessageBoxW(
+            None,
+            w!("Mousemeeter is already running. Look for its icon in the system tray."),
+            w!("Mousemeeter"),
+            MB_OK | MB_ICONINFORMATION,
+        )
+    };
 }
 
 #[cfg(test)]

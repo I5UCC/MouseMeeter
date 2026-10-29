@@ -38,16 +38,31 @@ fn main() {
         std::process::exit(if saved { 0 } else { 1 });
     }
 
+    // Checked before the logger, which would clear the running copy's log.
+    let Some(instance) = process::SingleInstance::acquire() else {
+        process::show_already_running();
+        return;
+    };
+
     logger::init(dir.join("log.txt"));
     log!("Mousemeeter {VERSION}");
     let config = Config::load(&dir.join("config.ini"));
 
-    if config.run_as_admin && !process::is_elevated() {
+    let _instance = if config.run_as_admin && !process::is_elevated() {
+        // Released first so the elevated copy can take it over.
+        drop(instance);
         if process::relaunch_elevated() {
             return;
         }
         log!("Could not restart with administrator rights; continuing without them");
-    }
+        let Some(instance) = process::SingleInstance::acquire() else {
+            log!("Another instance started meanwhile; exiting");
+            return;
+        };
+        instance
+    } else {
+        instance
+    };
 
     if let Err(e) = app::run(dir, config) {
         log!("Failed to initialize application: {e}");
