@@ -16,6 +16,8 @@ pub struct Config {
     pub voicemeeter_path: Option<PathBuf>,
     pub outputs: Outputs,
     pub volume_change_amount: f32,
+    /// Highest gain (dB) a wheel step can set. `None` allows the full range up to +12 dB.
+    pub volume_limit: Option<f32>,
     pub default_file: String,
     pub profile1_file: String,
     pub profile2_file: String,
@@ -63,6 +65,7 @@ impl Default for Config {
                 output3: 7,
             },
             volume_change_amount: 0.5,
+            volume_limit: Some(0.0),
             default_file: "default.xml".into(),
             profile1_file: "profile1.xml".into(),
             profile2_file: "profile2.xml".into(),
@@ -96,6 +99,10 @@ impl Config {
 
     pub fn to_ini(&self) -> String {
         let bool = |b: bool| if b { "True" } else { "False" };
+        let volume_limit = match self.volume_limit {
+            Some(limit) => limit.to_string(),
+            None => "off".into(),
+        };
         let path = match &self.voicemeeter_path {
             Some(path) => path.display().to_string(),
             None => "default".into(),
@@ -114,6 +121,7 @@ impl Config {
              OUTPUT_2={}\n\
              OUTPUT_3={}\n\
              VOLUME_CHANGE_AMOUNT={}\n\
+             VOLUME_LIMIT={volume_limit}\n\
              default_file={}\n\
              profile1_file={}\n\
              profile2_file={}\n\
@@ -208,6 +216,16 @@ impl Config {
             "VOLUME_CHANGE_AMOUNT" => {
                 self.volume_change_amount = value.parse().map_err(|e| format!("{e}"))?
             }
+            "VOLUME_LIMIT" => {
+                self.volume_limit = if value.eq_ignore_ascii_case("off") {
+                    None
+                } else {
+                    match value.parse::<f32>() {
+                        Ok(limit) if (-60.0..=12.0).contains(&limit) => Some(limit),
+                        _ => return Err("expected a dB value from -60 to 12, or off".into()),
+                    }
+                }
+            }
             "default_file" => self.default_file = value.into(),
             "profile1_file" => self.profile1_file = value.into(),
             "profile2_file" => self.profile2_file = value.into(),
@@ -236,7 +254,7 @@ mod tests {
         let expected = "[Settings]\nRunAsAdmin=True\nTitleMatchMode=3\nResetOnStartup=True\n\
                         SetAffinity=True\nSetCracklingFix=True\nVoicemeeterPath=default\n\n\
                         [VoicemeeterSettings]\nOUTPUT_1=5\nOUTPUT_2=6\nOUTPUT_3=7\n\
-                        VOLUME_CHANGE_AMOUNT=0.5\ndefault_file=default.xml\n\
+                        VOLUME_CHANGE_AMOUNT=0.5\nVOLUME_LIMIT=0\ndefault_file=default.xml\n\
                         profile1_file=profile1.xml\nprofile2_file=profile2.xml\n\n\
                         [DeactivateOnWindow]\n";
         assert_eq!(Config::default().to_ini(), expected);
@@ -258,6 +276,7 @@ mod tests {
                 output3: 4,
             },
             volume_change_amount: 1.25,
+            volume_limit: Some(-3.5),
             default_file: "home.xml".into(),
             profile1_file: "game.xml".into(),
             profile2_file: "stream.xml".into(),
@@ -272,7 +291,7 @@ mod tests {
             "\u{feff}[Settings]\nRunAsAdmin=false\nTitleMatchMode=2\nResetOnStartup=FALSE\n\
              VoicemeeterPath=D:\\VB\\Voicemeeter\n\
              [VoicemeeterSettings]\nOUTPUT_1 = 1\nOUTPUT_2=2\nOUTPUT_3=3\n\
-             VOLUME_CHANGE_AMOUNT=1.25\ndefault_file=a.xml\nprofile1_file=b.xml\nprofile2_file=c.xml\n",
+             VOLUME_CHANGE_AMOUNT=1.25\nVOLUME_LIMIT=6\ndefault_file=a.xml\nprofile1_file=b.xml\nprofile2_file=c.xml\n",
         );
         assert!(!config.run_as_admin);
         assert_eq!(config.title_match_mode, 2);
@@ -291,6 +310,7 @@ mod tests {
             }
         );
         assert_eq!(config.volume_change_amount, 1.25);
+        assert_eq!(config.volume_limit, Some(6.0));
         assert_eq!(
             (
                 config.default_file.as_str(),
@@ -316,9 +336,17 @@ mod tests {
     #[test]
     fn malformed_values_keep_defaults() {
         let config = Config::parse(
-            "[Settings]\nSetAffinity=maybe\nTitleMatchMode=7\n[VoicemeeterSettings]\nOUTPUT_1=x\nVOLUME_CHANGE_AMOUNT=\n",
+            "[Settings]\nSetAffinity=maybe\nTitleMatchMode=7\n[VoicemeeterSettings]\nOUTPUT_1=x\nVOLUME_CHANGE_AMOUNT=\n\
+             VOLUME_LIMIT=13\nVOLUME_LIMIT=nan\n",
         );
         assert_eq!(config, Config::default());
+    }
+
+    #[test]
+    fn volume_limit_can_be_turned_off() {
+        let config = Config::parse("[VoicemeeterSettings]\nVOLUME_LIMIT=Off\n");
+        assert_eq!(config.volume_limit, None);
+        assert_eq!(Config::parse(&config.to_ini()), config);
     }
 
     #[test]

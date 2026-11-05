@@ -23,7 +23,11 @@ impl<M: Mixer> MixerSession<M> {
         } else {
             -self.settings.volume_step
         };
-        let gain = (self.gain(strip) + step).clamp(MIN_GAIN, MAX_GAIN);
+        let max = self
+            .settings
+            .volume_limit
+            .map_or(MAX_GAIN, |limit| limit.clamp(MIN_GAIN, MAX_GAIN));
+        let gain = (self.gain(strip) + step).clamp(MIN_GAIN, max);
         match self.mixer.set_gain(strip, gain) {
             Ok(()) => {
                 self.strips.gains.insert(strip, gain);
@@ -133,6 +137,28 @@ mod tests {
         let mixer = s.into_mixer();
         assert_eq!(mixer.settled_gain(5), Some(MAX_GAIN));
         assert_eq!(mixer.settled_gain(6), Some(MIN_GAIN));
+    }
+
+    #[test]
+    fn gain_stops_at_the_volume_limit() {
+        let mut mixer = FakeMixer::default();
+        mixer.gains.insert(5, -0.8);
+        mixer.gains.insert(6, 6.0);
+        let mut s = session(mixer);
+        s.reconfigure(MixerSettings {
+            volume_limit: Some(0.0),
+            ..settings()
+        });
+
+        s.run(volume(5, true));
+        s.run(volume(5, true));
+        s.run(volume(5, true));
+        // A strip already above the limit is brought down to it by the next step.
+        s.run(volume(6, true));
+
+        let mixer = s.into_mixer();
+        assert_eq!(mixer.settled_gain(5), Some(0.0));
+        assert_eq!(mixer.settled_gain(6), Some(0.0));
     }
 
     #[test]

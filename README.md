@@ -38,7 +38,7 @@ Releasing Backward/Forward without triggering any of the above macros will just 
 
 ## Setup
 
-Download `Mousemeeter-windows.zip` from the [latest release](https://github.com/I5UCC/Mousemeeter/releases/latest) and extract it into a folder together with your profile XML files. A default `config.ini` is created there on first start, and `log.txt` is written next to the exe.
+Download `Mousemeeter-windows.zip` from the [latest release](https://github.com/I5UCC/Mousemeeter/releases/latest) and extract it into a folder together with your profile XML files. A default `config.ini` is created there on first start, and `log.txt` is written next to the exe. The log is cleared on each start; once it reaches 2 MB its oldest lines are dropped.
 
 ## Configuration
 
@@ -53,6 +53,7 @@ Right-click the tray icon → **Settings…** (or double-click the tray icon) to
 | `VoicemeeterPath` | Voicemeeter install folder, or `default`. |
 | `OUTPUT_1` / `OUTPUT_2` / `OUTPUT_3` | Strip index controlled with Backward / Forward / both. |
 | `VOLUME_CHANGE_AMOUNT` | dB per wheel step. |
+| `VOLUME_LIMIT` | Highest gain in dB the wheel can set (default `0`), or `off` to allow up to +12 dB. |
 | `default_file` / `profile1_file` / `profile2_file` | Profile XML files. |
 | `[DeactivateOnWindow]` | Window titles (one per line, `key=title` or just `title`) where the mouse macros are disabled. |
 | `TitleMatchMode` | How those titles match: `1` = starts with, `2` = contains, `3` = exact. |

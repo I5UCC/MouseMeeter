@@ -112,7 +112,28 @@ impl SettingsWindow {
                         .suffix(" dB"),
                 );
                 ui.end_row();
+                ui.label("Volume limit");
+                ui.horizontal(|ui| {
+                    let mut limited = self.config.volume_limit.is_some();
+                    if ui.checkbox(&mut limited, "").changed() {
+                        self.config.volume_limit = limited.then_some(0.0);
+                    }
+                    let mut limit = self.config.volume_limit.unwrap_or(0.0);
+                    let edit = ui.add_enabled(
+                        limited,
+                        egui::DragValue::new(&mut limit)
+                            .range(-60.0..=12.0)
+                            .speed(0.1)
+                            .fixed_decimals(1)
+                            .suffix(" dB"),
+                    );
+                    if edit.changed() {
+                        self.config.volume_limit = Some(limit);
+                    }
+                });
+                ui.end_row();
             });
+            hint(ui, "The wheel never raises a strip above the volume limit.");
             hint(
                 ui,
                 "Voicemeeter Potato strips: 0–4 hardware inputs, 5 VAIO, 6 AUX, 7 VAIO3.",

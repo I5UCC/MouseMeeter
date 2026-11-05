@@ -233,6 +233,7 @@ fn mixer_settings(config: &Config, dir: &Path) -> MixerSettings {
     MixerSettings {
         strips: config.outputs.all(),
         volume_step: config.volume_change_amount,
+        volume_limit: config.volume_limit,
         profiles: ProfileFiles {
             dir: dir.to_path_buf(),
             default: config.default_file.clone(),

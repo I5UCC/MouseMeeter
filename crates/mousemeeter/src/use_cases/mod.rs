@@ -34,6 +34,8 @@ pub struct MixerSettings {
     pub strips: [i32; 3],
     /// dB per wheel step.
     pub volume_step: f32,
+    /// Highest gain (dB) a wheel step can set; `None` means Voicemeeter's maximum.
+    pub volume_limit: Option<f32>,
     pub profiles: ProfileFiles,
 }
 
@@ -186,6 +188,7 @@ pub(crate) mod fake {
         MixerSettings {
             strips: [5, 6, 7],
             volume_step: 0.5,
+            volume_limit: None,
             profiles: ProfileFiles {
                 dir: PathBuf::from("profiles"),
                 default: "default.xml".into(),
